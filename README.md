@@ -1,6 +1,6 @@
-# Hanami Auth App
+# Idea Sync Server
 
-Ruby + Hanami 2.3 + Rodauth による認証・DDD Lite アーキテクチャを採用した Web アプリケーション。
+Ruby + Hanami 2.3 による **Idea 管理 REST API**。DDD Lite アーキテクチャで構築した、アイデア共有・管理プラットフォームのバックエンド。
 
 ## 技術スタック
 
@@ -8,79 +8,118 @@ Ruby + Hanami 2.3 + Rodauth による認証・DDD Lite アーキテクチャを�
 - **認証**: Rodauth
 - **データベース**: PostgreSQL 17
 - **ORM**: Sequel（ROM 経由）
+- **API**: REST（JSON）
 - **コンテナ**: Docker + Docker Compose
 - **言語**: Ruby 3.3
 
 ## 特徴
 
-- ✅ DDD Lite アーキテクチャ（ドメイン層 ⊢ アプリケーション層 ⊢ インフラ層）
-- ✅ CRUD パターンの実装例（Todo 管理）
-- ✅ Docker Compose で完全な開発環境
-- ✅ Rodauth による強力な認証機能
+- ✅ **API ファースト** — JSON レスポンスのみ（フロント独立）
+- ✅ **DDD Lite アーキテクチャ** — ドメイン層 ⊢ アプリケーション層 ⊢ インフラ層
+- ✅ **CRUD パターン実装例** — Idea 管理機能
+- ✅ **Docker Compose** で完全な開発環境
+- ✅ **Rodauth** による認証
 
 ## クイックスタート
 
 ### セットアップ
 
 ```bash
-cd hanami_auth_app
+cd idea_sync_server
 docker compose up -d
 ```
 
 Docker が自動的にマイグレーションを実行します。
 
-### アクセス
+### API エンドポイント
 
 ```
-http://localhost:2300
+http://localhost:2300/api/ideas
 ```
 
-**アカウント登録** → **ログイン** → **Todo 管理**
+## API エンドポイント
+
+### Idea CRUD
+
+| メソッド | URL | 説明 |
+|---------|-----|------|
+| `GET` | `/api/ideas` | アイデア一覧（自分のアイデアのみ） |
+| `POST` | `/api/ideas` | 新規アイデア作成 |
+| `PATCH` | `/api/ideas/:id` | アイデア更新 |
+| `DELETE` | `/api/ideas/:id` | アイデア削除 |
+
+### 認証
+
+すべてのエンドポイントは Rodauth セッションで保護されています。
+
+**登録/ログイン** は `hanami_auth_app` 側で行います（別アプリ）。
 
 ## ディレクトリ構成
 
 ```
-hanami_auth_app/
+idea_sync_server/
 ├── lib/hanami_auth_app/
-│   ├── domain/              # ドメイン層（エンティティ、ビジネスルール）
+│   ├── domain/              # ドメイン層
 │   │   ├── account/
-│   │   ├── todo/
+│   │   ├── idea/            # ← Idea エンティティ
 │   │   └── shared/result.rb
-│   └── rodauth_app.rb       # 認証ミドルウェア（Roda）
+│   └── rodauth_app.rb       # 認証ミドルウェア
 ├── app/
-│   ├── usecases/            # アプリケーション層（ユースケース）
-│   │   └── todo/
-│   ├── repos/               # インフラ層（リポジトリ実装）
-│   │   └── todo_repository.rb
-│   └── actions/             # プレゼンテーション層（HTTP エンドポイント）
-│       ├── home/
-│       └── todo/
+│   ├── usecases/
+│   │   └── idea/            # ← Idea CRUD UseCase
+│   ├── repos/
+│   │   └── idea_repository.rb  # ← Sequel 実装
+│   └── actions/
+│       └── api/
+│           └── ideas/       # ← REST API Actions
 ├── config/
-│   ├── app.rb               # DI コンテナ設定
-│   ├── routes.rb            # ルーティング
-│   └── db/migrate/          # DB マイグレーション
-├── views/                   # ERB テンプレート
+│   ├── app.rb
+│   ├── routes.rb
+│   └── db/migrate/
 ├── Dockerfile
 └── docker-compose.yml
 ```
 
-詳細は [ARCHITECTURE.md](ARCHITECTURE.md) を参照。
+## 使用例
 
-## 主な機能
+### 一覧取得
 
-### 認証（Rodauth）
-- ユーザー登録
-- ログイン / ログアウト
-- セッション管理
+```bash
+curl -H "Cookie: _hanami_auth_app_session=..." \
+  http://localhost:2300/api/ideas
 
-### Todo 管理（CRUD パターン実装例）
-- ✅ Todo 一覧表示
-- ✅ Todo 作成
-- ⚙️ Todo 更新（実装済み）
-- ⚙️ Todo 削除（実装済み）
-- ⚙️ Todo 完了トグル（実装済み）
+# レスポンス
+{
+  "ideas": [
+    {
+      "id": 1,
+      "title": "新しいWebサービス",
+      "description": "...",
+      "created_at": "2025-06-07T...",
+      "updated_at": "2025-06-07T..."
+    }
+  ]
+}
+```
 
-（✅=動作確認済み、⚙️=実装済み未テスト）
+### 作成
+
+```bash
+curl -X POST \
+  -H "Cookie: _hanami_auth_app_session=..." \
+  -H "Content-Type: application/json" \
+  -d '{"title":"AI活用","description":"..."}' \
+  http://localhost:2300/api/ideas
+
+# レスポンス (201 Created)
+{
+  "idea": {
+    "id": 2,
+    "title": "AI活用",
+    ...
+  }
+}
+```
 
 ## 開発フロー
 
@@ -101,14 +140,15 @@ docker compose down
 ## 次のステップ
 
 - [ ] Docker 起動 → マイグレーション実行確認
-- [ ] ブラウザで `/todos` にアクセスして CRUD 動作確認
-- [ ] Update/Delete/Toggle アクション実装
-- [ ] View テンプレート整備
+- [ ] `curl` で API テスト（CRUD 確認）
+- [ ] Postman/Insomnia で API 検証
+- [ ] WebSocket 対応（リアルタイム更新）
+- [ ] タグ/カテゴリ機能追加
 - [ ] ユニットテスト・統合テスト追加
-- [ ] API モード対応（JSON レスポンス）
+- [ ] ユーザー間コラボレーション機能
 
 ## 参考
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) — 設計思想と実装パターン
+- [ARCHITECTURE.md](ARCHITECTURE.md) — DDD Lite 設計と API パターン
 - [Hanami ガイド](https://guides.hanamirb.org/)
 - [Rodauth ドキュメント](https://rodauth.jeremyevans.net/)
