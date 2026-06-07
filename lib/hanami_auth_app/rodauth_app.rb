@@ -15,7 +15,7 @@ module HanamiAuthApp
       enable :login, :logout, :create_account
 
       use_database_authentication_functions? false
-      login_return_to_requested_location? true
+      skip_csrf_check? { request.content_type == "application/json" }
     end
 
     route do |r|

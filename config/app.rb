@@ -14,12 +14,17 @@ module HanamiAuthApp
     require_relative "../lib/hanami_auth_app/domain/todo/todo_repository"
     require_relative "../lib/hanami_auth_app/domain/idea/idea"
     require_relative "../lib/hanami_auth_app/domain/idea/idea_repository"
-    require_relative "../app/repos/todo_repository"
-    require_relative "../app/repos/idea_repository"
 
-    # Register services in container
-    register :todo_repository, HanamiAuthApp::Repos::TodoRepository.new
-    register :idea_repository, HanamiAuthApp::Repos::IdeaRepository.new
+    # Register repositories lazily (after RODAUTH_DB is initialized)
+    register :todo_repository do
+      require_relative "../app/repos/todo_repository"
+      HanamiAuthApp::Repos::TodoRepository.new
+    end
+
+    register :idea_repository do
+      require_relative "../app/repos/idea_repository"
+      HanamiAuthApp::Repos::IdeaRepository.new
+    end
   end
 end
 
