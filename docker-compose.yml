@@ -1,0 +1,36 @@
+services:
+  app:
+    build: .
+    command: bundle exec puma -C config/puma.rb
+    ports:
+      - "2300:2300"
+    environment:
+      DATABASE_URL: postgres://postgres:password@db/hanami_auth_app_development
+      SESSION_SECRET: dev-secret-please-change-in-production-must-be-at-least-64-characters-long
+      HANAMI_ENV: development
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - bundle_cache:/usr/local/bundle
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: hanami_auth_app_development
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  bundle_cache:
