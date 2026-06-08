@@ -58,6 +58,18 @@ http://localhost:2300/api/ideas
 | `POST` | `/api/accounts` | ユーザー登録 → JWT token |
 | `POST` | `/api/login` | ログイン → JWT token |
 
+### グローバルチャット（ポーリング）
+
+| メソッド | URL | ステータス | 説明 |
+|---------|-----|-----------|------|
+| `GET` | `/api/messages` | 200 | すべてのメッセージを取得（最新順） |
+| `POST` | `/api/messages` | 201 | 新規メッセージ作成 |
+
+**特徴:**
+- ポーリング方式（10秒ごと）でメッセージを同期
+- すべてのユーザーがグローバルチャットルームを共有
+- JWT Bearer token で認証
+
 **すべての Idea エンドポイントは Bearer token で保護されています。**
 
 ```bash
