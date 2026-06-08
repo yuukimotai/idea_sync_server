@@ -8,8 +8,8 @@ Sequel.migration do
       DateTime :updated_at, null: false
     end
 
-    create_index :messages, :account_id
-    create_index :messages, :created_at
+    add_index :messages, :account_id
+    add_index :messages, :created_at
   end
 
   down do
