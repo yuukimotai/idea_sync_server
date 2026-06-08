@@ -5,7 +5,7 @@ Ruby + Hanami 2.3 による **Idea 管理 REST API**。DDD Lite アーキテク�
 ## 技術スタック
 
 - **フレームワーク**: Hanami 2.3
-- **認証**: Rodauth
+- **認証**: JWT（Base64 + HMAC-SHA256 手動実装）
 - **データベース**: PostgreSQL 17
 - **ORM**: Sequel（ROM 経由）
 - **API**: REST（JSON）
@@ -18,7 +18,7 @@ Ruby + Hanami 2.3 による **Idea 管理 REST API**。DDD Lite アーキテク�
 - ✅ **DDD Lite アーキテクチャ** — ドメイン層 ⊢ アプリケーション層 ⊢ インフラ層
 - ✅ **CRUD パターン実装例** — Idea 管理機能
 - ✅ **Docker Compose** で完全な開発環境
-- ✅ **Rodauth** による認証
+- ✅ **JWT 認証** — Bearer token で API 保護
 
 ## クイックスタート
 
@@ -50,9 +50,17 @@ http://localhost:2300/api/ideas
 
 ### 認証
 
-すべてのエンドポイントは Rodauth セッションで保護されています。
+| メソッド | URL | 説明 |
+|---------|-----|------|
+| `POST` | `/api/accounts` | ユーザー登録 → JWT token |
+| `POST` | `/api/login` | ログイン → JWT token |
 
-**登録/ログイン** は `hanami_auth_app` 側で行います（別アプリ）。
+**すべての Idea エンドポイントは Bearer token で保護されています。**
+
+```bash
+curl -H "Authorization: Bearer <JWT_TOKEN>" \
+  http://localhost:2300/api/ideas
+```
 
 ## ディレクトリ構成
 
@@ -60,17 +68,20 @@ http://localhost:2300/api/ideas
 idea_sync_server/
 ├── lib/hanami_auth_app/
 │   ├── domain/              # ドメイン層
-│   │   ├── account/
+│   │   ├── account/         # ← Account エンティティ
 │   │   ├── idea/            # ← Idea エンティティ
 │   │   └── shared/result.rb
-│   └── rodauth_app.rb       # 認証ミドルウェア
+│   └── jwt_auth.rb          # ← JWT 認証（Base64 + HMAC-SHA256）
 ├── app/
 │   ├── usecases/
+│   │   ├── account/         # ← Account CRUD UseCase
 │   │   └── idea/            # ← Idea CRUD UseCase
 │   ├── repos/
-│   │   └── idea_repository.rb  # ← Sequel 実装
+│   │   ├── account_repository.rb  # ← Account Sequel 実装
+│   │   └── idea_repository.rb     # ← Idea Sequel 実装
 │   └── actions/
 │       └── api/
+│           ├── accounts/    # ← 登録/ログイン
 │           └── ideas/       # ← REST API Actions
 ├── config/
 │   ├── app.rb
@@ -82,10 +93,31 @@ idea_sync_server/
 
 ## 使用例
 
-### 一覧取得
+### 1. ユーザー登録 → JWT token 取得
 
 ```bash
-curl -H "Cookie: _hanami_auth_app_session=..." \
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"password123"}' \
+  http://localhost:2300/api/accounts
+
+# レスポンス (201 Created)
+{
+  "status": "success",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "account": {
+    "id": 1,
+    "email": "user@example.com"
+  }
+}
+```
+
+### 2. アイデア一覧取得（JWT 認証）
+
+```bash
+TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:2300/api/ideas
 
 # レスポンス
@@ -102,21 +134,21 @@ curl -H "Cookie: _hanami_auth_app_session=..." \
 }
 ```
 
-### 作成
+### 3. ログイン → 新しい token 取得
 
 ```bash
 curl -X POST \
-  -H "Cookie: _hanami_auth_app_session=..." \
   -H "Content-Type: application/json" \
-  -d '{"title":"AI活用","description":"..."}' \
-  http://localhost:2300/api/ideas
+  -d '{"email":"user@example.com","password":"password123"}' \
+  http://localhost:2300/api/login
 
-# レスポンス (201 Created)
+# レスポンス
 {
-  "idea": {
-    "id": 2,
-    "title": "AI活用",
-    ...
+  "status": "success",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "account": {
+    "id": 1,
+    "email": "user@example.com"
   }
 }
 ```
@@ -147,8 +179,22 @@ docker compose down
 - [ ] ユニットテスト・統合テスト追加
 - [ ] ユーザー間コラボレーション機能
 
+## 認証の仕組み
+
+JWT は以下の流れで生成・検証されます：
+
+```
+Header (JSON)  → Base64URL encode
+Payload (JSON) → Base64URL encode
+Signature      → HMAC-SHA256(header.payload, SECRET) → Base64URL encode
+
+Token = header.payload.signature
+```
+
+**Secret キー**は `ENV['JWT_SECRET']` または デフォルト `"dev-secret-key-change-in-production"` で、本番環境では必ず変更してください。
+
 ## 参考
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — DDD Lite 設計と API パターン
 - [Hanami ガイド](https://guides.hanamirb.org/)
-- [Rodauth ドキュメント](https://rodauth.jeremyevans.net/)
+- [JWT 仕様](https://tools.ietf.org/html/rfc7519)
