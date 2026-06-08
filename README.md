@@ -6,11 +6,13 @@ Ruby + Hanami 2.3 による **Idea 管理 REST API**。DDD Lite アーキテク�
 
 - **フレームワーク**: Hanami 2.3
 - **認証**: JWT（Base64 + HMAC-SHA256 手動実装）
-- **データベース**: PostgreSQL 17
+- **Webサーバー**: Puma 6.6.1
+- **データベース**: PostgreSQL 16
 - **ORM**: Sequel（ROM 経由）
 - **API**: REST（JSON）
+- **CORS**: rack-cors（すべてのオリジン対応）
 - **コンテナ**: Docker + Docker Compose
-- **言語**: Ruby 3.3
+- **言語**: Ruby 3.2
 
 ## 特徴
 
@@ -41,12 +43,13 @@ http://localhost:2300/api/ideas
 
 ### Idea CRUD
 
-| メソッド | URL | 説明 |
-|---------|-----|------|
-| `GET` | `/api/ideas` | アイデア一覧（自分のアイデアのみ） |
-| `POST` | `/api/ideas` | 新規アイデア作成 |
-| `PATCH` | `/api/ideas/:id` | アイデア更新 |
-| `DELETE` | `/api/ideas/:id` | アイデア削除 |
+| メソッド | URL | ステータス | 説明 |
+|---------|-----|-----------|------|
+| `GET` | `/api/ideas` | 200 | アイデア一覧（自分のアイデアのみ） |
+| `POST` | `/api/ideas` | 201 | 新規アイデア作成 |
+| `GET` | `/api/ideas/:id` | 200/404 | アイデア詳細取得 |
+| `PATCH` | `/api/ideas/:id` | 200 | アイデア更新 |
+| `DELETE` | `/api/ideas/:id` | 204 | アイデア削除 |
 
 ### 認証
 
@@ -151,6 +154,44 @@ curl -X POST \
     "email": "user@example.com"
   }
 }
+```
+
+### 4. アイデア詳細取得（JWT 認証）
+
+```bash
+TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:2300/api/ideas/1
+
+# レスポンス (200 OK)
+{
+  "id": 1,
+  "account_id": 1,
+  "title": "新しいWebサービス",
+  "description": "...",
+  "created_at": "2025-06-07T...",
+  "updated_at": "2025-06-07T..."
+}
+
+# 見つからない場合 (404 Not Found)
+{ "error": "Idea not found" }
+```
+
+### 5. エラーレスポンス
+
+```bash
+# JWT トークンがない場合 (401 Unauthorized)
+{ "error": "Missing or invalid authorization header" }
+
+# JWT トークンが無効な場合 (401 Unauthorized)
+{ "error": "Invalid token" }
+
+# アイデアが見つからない場合 (404 Not Found)
+{ "error": "Idea not found" }
+
+# サーバーエラー (500 Internal Server Error)
+{ "error": "error message" }
 ```
 
 ## 開発フロー
