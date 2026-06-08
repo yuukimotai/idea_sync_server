@@ -32,6 +32,10 @@ jobs:
       with:
         ruby-version: '3.3'
         bundler-cache: true
+        cache-version: 1
+
+    - name: Update bundler
+      run: gem install bundler -v "$(tail -1 Gemfile.lock | tr -d ' ')" || gem install bundler
 
     - name: Setup test database
       env:
