@@ -1,7 +1,7 @@
 services:
   app:
     build: .
-    command: bundle exec puma -C config/puma.rb
+    command: bundle exec iodine -p 2300
     ports:
       - "2300:2300"
     environment:
@@ -16,7 +16,7 @@ services:
       - bundle_cache:/usr/local/bundle
 
   db:
-    image: postgres:17-alpine
+    image: postgres:16
     environment:
       POSTGRES_DB: hanami_auth_app_development
       POSTGRES_USER: postgres

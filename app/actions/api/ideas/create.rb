@@ -1,22 +1,31 @@
 # frozen_string_literal: true
 
 require_relative "../../../usecases/idea/create_idea"
+require_relative "../../../../lib/hanami_auth_app/jwt_auth"
 
 module HanamiAuthApp
   module Actions
     module API
       module Ideas
         class Create < HanamiAuthApp::Action
-          include Hanami::Action::Session
-
           def handle(request, response)
-            account_id = request.env["rack.session"]&.[](:account_id)
-
-            unless account_id
+            auth_header = request.env["HTTP_AUTHORIZATION"]
+            unless auth_header && auth_header.start_with?("Bearer ")
               response.status = 401
-              response.body = { error: "Unauthorized" }.to_json
+              response.body = { error: "Missing or invalid authorization header" }.to_json
               return
             end
+
+            token = auth_header.sub("Bearer ", "")
+            payload = JwtAuth.decode(token)
+
+            unless payload
+              response.status = 401
+              response.body = { error: "Invalid token" }.to_json
+              return
+            end
+
+            account_id = payload["account_id"]
 
             params = JSON.parse(request.body.read)
 
@@ -47,6 +56,7 @@ module HanamiAuthApp
           def idea_to_json(idea)
             {
               id: idea.id,
+              account_id: idea.account_id,
               title: idea.title,
               description: idea.description,
               created_at: idea.created_at,

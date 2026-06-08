@@ -46,6 +46,7 @@ module HanamiAuthApp
           def idea_to_json(idea)
             {
               id: idea.id,
+              account_id: idea.account_id,
               title: idea.title,
               description: idea.description,
               created_at: idea.created_at,

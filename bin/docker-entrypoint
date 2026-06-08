@@ -4,4 +4,7 @@ set -euo pipefail
 bundle check || bundle install
 bundle exec hanami db prepare
 
+# Remove transaction_timeout from structure.sql for PostgreSQL 16 compatibility
+sed -i '/SET transaction_timeout = 0;/d' config/db/structure.sql
+
 exec "$@"
