@@ -15,6 +15,7 @@ module HanamiAuthApp
     # API routes for ideas
     get "/api/ideas", to: "api.ideas.index"
     post "/api/ideas", to: "api.ideas.create"
+    get "/api/ideas/:id", to: "api.ideas.show"
     patch "/api/ideas/:id", to: "api.ideas.update"
     delete "/api/ideas/:id", to: "api.ideas.delete"
   end
