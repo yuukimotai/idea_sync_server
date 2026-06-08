@@ -3,24 +3,25 @@
 module HanamiAuthApp
   module Usecases
     module Idea
-      class UpdateIdea < HanamiAuthApp::Operation
-        input :id, :title, :description
-        output :idea
+      class UpdateIdea
+        def initialize(idea_repository)
+          @idea_repository = idea_repository
+        end
 
         def call(input)
-          idea = container[:idea_repository].find_by_id(input[:id])
-          return Failure(message: "Idea not found") unless idea
+          idea = @idea_repository.find_by_id(input[:id])
+          return Domain::Result.err("Idea not found") unless idea
 
           title = input[:title].to_s.strip
           description = input[:description].to_s.strip
-          return Failure(message: "Title cannot be blank") if title.empty?
+          return Domain::Result.err("Title cannot be blank") if title.empty?
 
           updated = idea.update_title(title).update_description(description)
-          idea = container[:idea_repository].update(updated)
+          idea = @idea_repository.update(updated)
 
-          Success(idea: idea)
+          Domain::Result.ok(idea: idea)
         rescue => e
-          Failure(message: e.message)
+          Domain::Result.err(e.message)
         end
       end
     end

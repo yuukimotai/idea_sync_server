@@ -12,7 +12,7 @@ gem "hanami-view", "~> 2.3.0"
 
 gem "dry-types", "~> 1.7"
 gem "dry-operation", ">= 1.0.1"
-gem "iodine"
+gem "puma", "~> 6.0"
 gem "rake"
 gem "pg"
 gem "sequel"

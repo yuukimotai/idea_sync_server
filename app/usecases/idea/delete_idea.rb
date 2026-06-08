@@ -3,18 +3,19 @@
 module HanamiAuthApp
   module Usecases
     module Idea
-      class DeleteIdea < HanamiAuthApp::Operation
-        input :id
-        output :success
+      class DeleteIdea
+        def initialize(idea_repository)
+          @idea_repository = idea_repository
+        end
 
         def call(input)
-          idea = container[:idea_repository].find_by_id(input[:id])
-          return Failure(message: "Idea not found") unless idea
+          idea = @idea_repository.find_by_id(input[:id])
+          return Domain::Result.err("Idea not found") unless idea
 
-          container[:idea_repository].delete(input[:id])
-          Success(success: true)
+          @idea_repository.delete(input[:id])
+          Domain::Result.ok(success: true)
         rescue => e
-          Failure(message: e.message)
+          Domain::Result.err(e.message)
         end
       end
     end

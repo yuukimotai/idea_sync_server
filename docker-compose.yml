@@ -1,7 +1,7 @@
 services:
   app:
     build: .
-    command: bundle exec iodine -p 2300
+    command: bundle exec puma -C config/puma.rb
     ports:
       - "2300:2300"
     environment:

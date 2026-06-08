@@ -88,7 +88,17 @@ GEM
       zeitwerk (~> 2.6)
     erb (6.0.4)
     erubi (1.13.1)
+    ffi (1.17.4)
+    ffi (1.17.4-aarch64-linux-gnu)
+    ffi (1.17.4-aarch64-linux-musl)
+    ffi (1.17.4-arm-linux-gnu)
+    ffi (1.17.4-arm-linux-musl)
+    ffi (1.17.4-arm64-darwin)
+    ffi (1.17.4-x86-linux-gnu)
+    ffi (1.17.4-x86-linux-musl)
+    ffi (1.17.4-x86_64-darwin)
     ffi (1.17.4-x86_64-linux-gnu)
+    ffi (1.17.4-x86_64-linux-musl)
     formatador (1.2.3)
       reline
     guard (2.20.1)
@@ -175,7 +185,6 @@ GEM
     hansi (0.2.1)
     ice_nine (0.11.2)
     io-console (0.8.2)
-    iodine (0.7.59)
     irb (1.18.0)
       pp (>= 0.6.0)
       prism (>= 1.3.0)
@@ -198,7 +207,13 @@ GEM
     notiffany (0.1.3)
       nenv (~> 0.1)
       shellany (~> 0.0)
+    pg (1.6.3)
+    pg (1.6.3-aarch64-linux)
+    pg (1.6.3-aarch64-linux-musl)
+    pg (1.6.3-arm64-darwin)
+    pg (1.6.3-x86_64-darwin)
     pg (1.6.3-x86_64-linux)
+    pg (1.6.3-x86_64-linux-musl)
     pp (0.6.3)
       prettyprint
     prettyprint (0.2.0)
@@ -210,7 +225,7 @@ GEM
     psych (5.4.0)
       date
       stringio
-    puma (7.2.1)
+    puma (6.6.1)
       nio4r (~> 2.0)
     rack (3.2.6)
     rack-session (2.1.2)
@@ -282,7 +297,18 @@ GEM
     zeitwerk (2.8.2)
 
 PLATFORMS
+  aarch64-linux
+  aarch64-linux-gnu
+  aarch64-linux-musl
+  arm-linux-gnu
+  arm-linux-musl
+  arm64-darwin
+  ruby
+  x86-linux-gnu
+  x86-linux-musl
+  x86_64-darwin
   x86_64-linux-gnu
+  x86_64-linux-musl
 
 DEPENDENCIES
   bcrypt
@@ -299,8 +325,8 @@ DEPENDENCIES
   hanami-validations (~> 2.3.0)
   hanami-view (~> 2.3.0)
   hanami-webconsole (~> 2.3.0)
-  iodine
   pg
+  puma (~> 6.0)
   rake
   sequel
 

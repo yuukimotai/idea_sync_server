@@ -3,25 +3,26 @@
 module HanamiAuthApp
   module Usecases
     module Idea
-      class CreateIdea < HanamiAuthApp::Operation
-        input :account_id, :title, :description
-        output :idea
+      class CreateIdea
+        def initialize(idea_repository)
+          @idea_repository = idea_repository
+        end
 
         def call(input)
           title = input[:title].to_s.strip
           description = input[:description].to_s.strip
 
-          return Failure(message: "Title cannot be blank") if title.empty?
+          return Domain::Result.err("Title cannot be blank") if title.empty?
 
-          idea = container[:idea_repository].create(
+          idea = @idea_repository.create(
             account_id: input[:account_id],
             title: title,
             description: description
           )
 
-          Success(idea: idea)
+          Domain::Result.ok(idea: idea)
         rescue => e
-          Failure(message: e.message)
+          Domain::Result.err(e.message)
         end
       end
     end
