@@ -1,32 +1,43 @@
 # frozen_string_literal: true
 
-require_relative "../../../app/usecases/idea/list_ideas"
+require_relative "../../../usecases/idea/list_ideas"
+require_relative "../../../../lib/hanami_auth_app/jwt_auth"
 
 module HanamiAuthApp
   module Actions
-    module Api
+    module API
       module Ideas
         class Index < HanamiAuthApp::Action
-          include Hanami::Action::Session
-
           def handle(request, response)
-            account_id = request.env["rack.session"]&.[](:account_id)
-
-            unless account_id
+            auth_header = request.env["HTTP_AUTHORIZATION"]
+            unless auth_header && auth_header.start_with?("Bearer ")
               response.status = 401
-              response.body = { error: "Unauthorized" }.to_json
+              response.body = { error: "Missing or invalid authorization header" }.to_json
               return
             end
 
-            usecase = Usecases::Idea::ListIdeas.new(container: container)
+            token = auth_header.sub("Bearer ", "")
+            payload = JwtAuth.decode(token)
+
+            unless payload
+              response.status = 401
+              response.body = { error: "Invalid token" }.to_json
+              return
+            end
+
+            account_id = payload["account_id"]
+
+            usecase = Usecases::Idea::ListIdeas.new(
+              HanamiAuthApp::App.container.resolve(:idea_repository)
+            )
             result = usecase.call(account_id: account_id)
 
             if result.success?
-              ideas_json = result[:ideas].map { |idea| idea_to_json(idea) }
+              ideas_json = result.value[:ideas].map { |idea| idea_to_json(idea) }
               response.body = { ideas: ideas_json }.to_json
             else
               response.status = 500
-              response.body = { error: result.failure }.to_json
+              response.body = { error: result.error }.to_json
             end
           end
 

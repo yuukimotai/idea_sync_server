@@ -15,7 +15,7 @@ gem "dry-operation", ">= 1.0.1"
 gem "puma"
 gem "rake"
 gem "pg"
-gem "rodauth"
+gem "sequel"
 gem "bcrypt"
 
 group :development do

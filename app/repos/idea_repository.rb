@@ -4,7 +4,7 @@ module HanamiAuthApp
   module Repos
     class IdeaRepository < Domain::Idea::IdeaRepository
       def initialize(db = nil)
-        @db = db || HanamiAuthApp::RODAUTH_DB
+        @db = db || Sequel.connect(ENV.fetch("DATABASE_URL"))
       end
 
       def create(account_id:, title:, description:)

@@ -12,7 +12,11 @@ module HanamiAuthApp
           raise NotImplementedError
         end
 
-        def create(email)
+        def create(email, password_digest)
+          raise NotImplementedError
+        end
+
+        def find_by_email_with_password(email)
           raise NotImplementedError
         end
       end

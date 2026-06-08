@@ -15,7 +15,12 @@ module HanamiAuthApp
       enable :login, :logout, :create_account
 
       use_database_authentication_functions? false
-      skip_csrf_check? { request.content_type == "application/json" }
+
+      # Cast token to string for CSRF validation
+      def csrf_token
+        token = super
+        token.to_s if token
+      end
     end
 
     route do |r|

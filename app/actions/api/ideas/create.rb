@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-require_relative "../../../app/usecases/idea/create_idea"
+require_relative "../../../usecases/idea/create_idea"
 
 module HanamiAuthApp
   module Actions
-    module Api
+    module API
       module Ideas
         class Create < HanamiAuthApp::Action
           include Hanami::Action::Session

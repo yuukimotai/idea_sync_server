@@ -191,6 +191,8 @@ GEM
       rdoc (>= 4.0.0)
       reline (>= 0.4.2)
     json (2.19.8)
+    jwt (3.2.0)
+      base64
     listen (3.10.0)
       logger
       rb-fsevent (~> 0.10, >= 0.10.3)
@@ -243,11 +245,6 @@ GEM
       tsort
     reline (0.6.3)
       io-console (~> 0.5)
-    roda (3.104.0)
-      rack
-    rodauth (2.43.0)
-      roda (>= 2.6.0)
-      sequel (>= 4)
     rom (5.4.3)
       rom-changeset (~> 5.4)
       rom-core (~> 5.4)
@@ -330,10 +327,11 @@ DEPENDENCIES
   hanami-validations (~> 2.3.0)
   hanami-view (~> 2.3.0)
   hanami-webconsole (~> 2.3.0)
+  jwt
   pg
   puma
   rake
-  rodauth
+  sequel
 
 BUNDLED WITH
    2.5.22

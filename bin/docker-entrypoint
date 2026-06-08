@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Load rodauth to define RODAUTH_DB before migrations
-bundle exec ruby -r./lib/hanami_auth_app/rodauth_app -e "HanamiAuthApp::RODAUTH_DB"
-
+bundle check || bundle install
 bundle exec hanami db prepare
 
 exec "$@"

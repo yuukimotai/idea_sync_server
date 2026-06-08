@@ -3,15 +3,16 @@
 module HanamiAuthApp
   module Usecases
     module Idea
-      class ListIdeas < HanamiAuthApp::Operation
-        input :account_id
-        output :ideas
+      class ListIdeas
+        def initialize(idea_repository)
+          @idea_repository = idea_repository
+        end
 
-        def call(input)
-          ideas = container[:idea_repository].list_by_account(input[:account_id])
-          Success(ideas: ideas)
+        def call(account_id:)
+          ideas = @idea_repository.list_by_account(account_id)
+          Domain::Result.ok(ideas: ideas)
         rescue => e
-          Failure(message: e.message)
+          Domain::Result.err(e.message)
         end
       end
     end
