@@ -25,4 +25,4 @@ RUN bundle install --binstubs
 
 EXPOSE 2300
 ENTRYPOINT ["bin/docker-entrypoint"]
-CMD ["bundle", "exec", "puma", "-C", "config/puma.rb"]
+CMD ["bundle", "exec", "iodine", "-p", "2300"]
