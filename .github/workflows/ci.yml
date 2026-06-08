@@ -25,17 +25,13 @@ jobs:
           - 5432:5432
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
-        ruby-version: '3.3'
+        ruby-version: .ruby-version
         bundler-cache: true
-        cache-version: 1
-
-    - name: Update bundler
-      run: gem install bundler -v "$(tail -1 Gemfile.lock | tr -d ' ')" || gem install bundler
 
     - name: Setup test database
       env:
@@ -51,7 +47,7 @@ jobs:
   docker-build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
