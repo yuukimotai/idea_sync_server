@@ -30,7 +30,7 @@ module HanamiAuthApp
             idea_id = request.params[:id]
             params = JSON.parse(request.body.read)
 
-            usecase = Usecases::Idea::UpdateIdea.new(container: container)
+            usecase = Usecases::Idea::UpdateIdea.new(HanamiAuthApp::App.container.resolve(:idea_repository))
             result = usecase.call(
               id: idea_id,
               title: params["title"],
@@ -38,10 +38,10 @@ module HanamiAuthApp
             )
 
             if result.success?
-              response.body = { idea: idea_to_json(result[:idea]) }.to_json
+              response.body = { idea: idea_to_json(result.value[:idea]) }.to_json
             else
               response.status = 400
-              response.body = { error: result.failure }.to_json
+              response.body = { error: result.error }.to_json
             end
           rescue JSON::ParserError
             response.status = 400

@@ -38,7 +38,7 @@ module HanamiAuthApp
 
             if result.success?
               response.status = 201
-              response.body = { idea: idea_to_json(result[:idea]) }.to_json
+              response.body = { idea: idea_to_json(result.value[:idea]) }.to_json
             else
               response.status = 400
               response.body = { error: result.error }.to_json
