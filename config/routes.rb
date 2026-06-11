@@ -22,5 +22,10 @@ module HanamiAuthApp
     # API routes for messages
     get "/api/messages", to: "api.messages.index"
     post "/api/messages", to: "api.messages.create"
+
+    # API routes for AI chat
+    get "/api/ai_chat/sessions", to: "api.ai_chat.sessions.get_or_create"
+    get "/api/ai_chat/sessions/:session_id/messages", to: "api.ai_chat.messages.index"
+    post "/api/ai_chat/sessions/:session_id/messages", to: "api.ai_chat.messages.create"
   end
 end
