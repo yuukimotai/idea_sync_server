@@ -1,28 +1,23 @@
-FROM ruby:3.2
-
+FROM ruby:3.2-slim AS builder
 RUN apt-get update -qq && \
     apt-get install -y --no-install-recommends \
       build-essential \
       libpq-dev \
-      postgresql-client \
-      nodejs \
-      npm \
     && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
+COPY Gemfile Gemfile.lock ./
+RUN bundle config set --local without 'development test' && \
+    bundle install --jobs 4 --retry 3
 
-COPY Gemfile ./
-RUN bundle install --binstubs
-# Generate Gemfile.lock for reference (will be recreated by bundle if needed)
-RUN bundle lock
-
-COPY package.json ./
-RUN npm install
-
+FROM ruby:3.2-slim AS runner
+RUN apt-get update -qq && \
+    apt-get install -y --no-install-recommends \
+      libpq-dev \
+      postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY --from=builder /usr/local/bundle /usr/local/bundle
 COPY . .
-# Re-run bundle install in case Gemfile changed
-RUN bundle install --binstubs
-
 EXPOSE 2300
 ENTRYPOINT ["bin/docker-entrypoint"]
-CMD ["bundle", "exec", "iodine", "-p", "2300"]
+CMD ["bundle", "exec", "puma", "-p", "2300"]
