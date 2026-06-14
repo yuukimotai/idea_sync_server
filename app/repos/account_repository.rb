@@ -33,12 +33,18 @@ module HanamiAuthApp
         find_by_id(result)
       end
 
+      def update_role(id, role)
+        @db[:accounts].where(id: id).update(role: role, updated_at: Time.now)
+        find_by_id(id)
+      end
+
       private
 
       def to_entity(row)
         Domain::Account::Account.new(
           id: row[:id],
-          email: row[:email]
+          email: row[:email],
+          role: row[:role]
         )
       end
     end
