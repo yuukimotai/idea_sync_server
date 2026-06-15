@@ -11,6 +11,7 @@ module HanamiAuthApp
         def call(input)
           idea = @idea_repository.find_by_id(input[:id])
           return Domain::Result.err("Idea not found") unless idea
+          return Domain::Result.err("Forbidden") unless idea.account_id == input[:account_id]
 
           title = input[:title].to_s.strip
           description = input[:description].to_s.strip

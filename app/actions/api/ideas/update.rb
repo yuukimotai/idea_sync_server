@@ -33,6 +33,7 @@ module HanamiAuthApp
             usecase = Usecases::Idea::UpdateIdea.new(HanamiAuthApp::App.container.resolve(:idea_repository))
             result = usecase.call(
               id: idea_id,
+              account_id: account_id,
               title: params["title"],
               description: params["description"]
             )
@@ -40,7 +41,7 @@ module HanamiAuthApp
             if result.success?
               response.body = { idea: idea_to_json(result.value[:idea]) }.to_json
             else
-              response.status = 400
+              response.status = error_status(result.error)
               response.body = { error: result.error }.to_json
             end
           rescue JSON::ParserError
@@ -52,6 +53,14 @@ module HanamiAuthApp
           end
 
           private
+
+          def error_status(error)
+            case error
+            when "Forbidden" then 403
+            when "Idea not found" then 404
+            else 400
+            end
+          end
 
           def idea_to_json(idea)
             {

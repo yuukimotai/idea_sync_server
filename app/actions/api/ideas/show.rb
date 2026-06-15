@@ -24,6 +24,7 @@ module HanamiAuthApp
               return
             end
 
+            account_id = payload["account_id"]
             idea_id = request.params[:id]
             idea_repo = HanamiAuthApp::App.container.resolve(:idea_repository)
             idea = idea_repo.find_by_id(idea_id)
@@ -31,6 +32,12 @@ module HanamiAuthApp
             unless idea
               response.status = 404
               response.body = { error: "Idea not found" }.to_json
+              return
+            end
+
+            unless idea.account_id == account_id
+              response.status = 403
+              response.body = { error: "Forbidden" }.to_json
               return
             end
 

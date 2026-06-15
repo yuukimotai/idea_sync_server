@@ -25,20 +25,31 @@ module HanamiAuthApp
               return
             end
 
+            account_id = payload["account_id"]
             idea_id = request.params[:id]
 
             usecase = Usecases::Idea::DeleteIdea.new(HanamiAuthApp::App.container.resolve(:idea_repository))
-            result = usecase.call(id: idea_id)
+            result = usecase.call(id: idea_id, account_id: account_id)
 
             if result.success?
               response.status = 204
             else
-              response.status = 400
+              response.status = error_status(result.error)
               response.body = { error: result.error }.to_json
             end
           rescue => e
             response.status = 500
             response.body = { error: e.message }.to_json
+          end
+
+          private
+
+          def error_status(error)
+            case error
+            when "Forbidden" then 403
+            when "Idea not found" then 404
+            else 400
+            end
           end
         end
       end
