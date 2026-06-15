@@ -11,6 +11,7 @@ module HanamiAuthApp
     # API routes for auth
     post "/api/accounts", to: "api.accounts.create"
     post "/api/login", to: "api.accounts.login"
+    get "/api/me", to: "api.me.show"
 
     # API routes for ideas
     get "/api/ideas", to: "api.ideas.index"
