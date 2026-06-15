@@ -1,8 +1,9 @@
 name: Deploy to ECS
 
+# AWS環境（Terraform）構築前のため自動実行は停止中。
+# ECR/ECSを作ったら push トリガーに戻す。
 on:
-  push:
-    branches: [main]
+  workflow_dispatch
 
 env:
   AWS_REGION: ap-northeast-1
