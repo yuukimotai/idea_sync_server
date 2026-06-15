@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "sequel"
+require_relative "../../lib/hanami_auth_app/uuid7"
 
 module HanamiAuthApp
   module Repos
@@ -24,13 +25,15 @@ module HanamiAuthApp
       end
 
       def create(email, password_digest)
-        result = @db[:accounts].insert(
+        id = HanamiAuthApp::Uuid7.generate
+        @db[:accounts].insert(
+          id: id,
           email: email,
           password_digest: password_digest,
           created_at: Time.now,
           updated_at: Time.now
         )
-        find_by_id(result)
+        find_by_id(id)
       end
 
       def update_role(id, role)

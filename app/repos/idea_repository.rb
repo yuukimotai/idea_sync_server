@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../../lib/hanami_auth_app/uuid7"
+
 module HanamiAuthApp
   module Repos
     class IdeaRepository < Domain::Idea::IdeaRepository
@@ -8,7 +10,9 @@ module HanamiAuthApp
       end
 
       def create(account_id:, title:, description:)
-        row = @db[:ideas].insert(
+        id = HanamiAuthApp::Uuid7.generate
+        @db[:ideas].insert(
+          id: id,
           account_id: account_id,
           title: title,
           description: description,
@@ -16,7 +20,7 @@ module HanamiAuthApp
           updated_at: Time.now
         )
 
-        idea_row = @db[:ideas].where(id: row).first
+        idea_row = @db[:ideas].where(id: id).first
         to_entity(idea_row)
       end
 

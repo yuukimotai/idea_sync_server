@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../../lib/hanami_auth_app/uuid7"
+
 module HanamiAuthApp
   module Repos
     class TodoRepository < Domain::Todo::TodoRepository
@@ -8,7 +10,9 @@ module HanamiAuthApp
       end
 
       def create(account_id:, title:)
-        row = @db[:todos].insert(
+        id = HanamiAuthApp::Uuid7.generate
+        @db[:todos].insert(
+          id: id,
           account_id: account_id,
           title: title,
           completed: false,
@@ -16,7 +20,7 @@ module HanamiAuthApp
           updated_at: Time.now
         )
 
-        todo_row = @db[:todos].where(id: row).first
+        todo_row = @db[:todos].where(id: id).first
         to_entity(todo_row)
       end
 

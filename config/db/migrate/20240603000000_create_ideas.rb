@@ -1,8 +1,8 @@
 Sequel.migration do
   up do
     create_table(:ideas) do
-      primary_key :id, type: :Bignum
-      foreign_key :account_id, :accounts, type: :Bignum, null: false
+      column :id, :uuid, primary_key: true
+      foreign_key :account_id, :accounts, type: :uuid, null: false
       String :title, null: false
       String :description, null: false, default: ""
       DateTime :created_at, null: false, default: Sequel::CURRENT_TIMESTAMP

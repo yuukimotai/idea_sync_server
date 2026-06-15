@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "sequel"
+require_relative "../../lib/hanami_auth_app/uuid7"
 
 module HanamiAuthApp
   module Repos
@@ -17,7 +18,9 @@ module HanamiAuthApp
       end
 
       def create(account_id:, idea_id:)
-        id = @db[:ai_chat_sessions].insert(
+        id = HanamiAuthApp::Uuid7.generate
+        @db[:ai_chat_sessions].insert(
+          id: id,
           account_id: account_id,
           idea_id: idea_id,
           created_at: Time.now,

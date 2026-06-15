@@ -1,7 +1,7 @@
 Sequel.migration do
   up do
     create_table(:accounts) do
-      primary_key :id, type: :Bignum
+      column :id, :uuid, primary_key: true
       String :email, null: false, unique: true
       String :password_digest, null: false
       DateTime :created_at, null: false

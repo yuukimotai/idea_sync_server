@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "sequel"
+require_relative "../../lib/hanami_auth_app/uuid7"
 
 module HanamiAuthApp
   module Repos
@@ -10,13 +11,15 @@ module HanamiAuthApp
       end
 
       def create(account_id:, body:)
-        result = @db[:messages].insert(
+        id = HanamiAuthApp::Uuid7.generate
+        @db[:messages].insert(
+          id: id,
           account_id: account_id,
           body: body,
           created_at: Time.now,
           updated_at: Time.now
         )
-        find_by_id(result)
+        find_by_id(id)
       end
 
       def list_recent(limit: 50)

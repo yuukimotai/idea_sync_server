@@ -13,7 +13,7 @@ module HanamiAuthApp
               payload = authenticate(request, response)
               return unless payload
 
-              session_id = request.params[:session_id].to_i
+              session_id = request.params[:session_id]
 
               begin
                 input_data = JSON.parse(request.body.read)

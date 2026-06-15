@@ -24,7 +24,7 @@ module HanamiAuthApp
                 HanamiAuthApp::App.container.resolve(:ai_chat_session_repository),
                 HanamiAuthApp::App.container.resolve(:idea_repository)
               )
-              result = usecase.call(account_id: payload["account_id"], idea_id: idea_id.to_i)
+              result = usecase.call(account_id: payload["account_id"], idea_id: idea_id)
 
               if result.success?
                 session = result.value[:session]

@@ -1,8 +1,8 @@
 Sequel.migration do
   up do
     create_table(:messages) do
-      primary_key :id, type: :Bignum
-      foreign_key :account_id, :accounts, type: :Bignum, null: false
+      column :id, :uuid, primary_key: true
+      foreign_key :account_id, :accounts, type: :uuid, null: false
       String :body, null: false
       DateTime :created_at, null: false
       DateTime :updated_at, null: false

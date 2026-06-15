@@ -1,9 +1,9 @@
 Sequel.migration do
   up do
     create_table(:ai_chat_sessions) do
-      primary_key :id, type: :Bignum
-      foreign_key :account_id, :accounts, type: :Bignum, null: false
-      foreign_key :idea_id, :ideas, type: :Bignum, null: false
+      column :id, :uuid, primary_key: true
+      foreign_key :account_id, :accounts, type: :uuid, null: false
+      foreign_key :idea_id, :ideas, type: :uuid, null: false
       DateTime :created_at, null: false
       DateTime :updated_at, null: false
 
@@ -11,8 +11,8 @@ Sequel.migration do
     end
 
     create_table(:ai_chat_messages) do
-      primary_key :id, type: :Bignum
-      foreign_key :session_id, :ai_chat_sessions, type: :Bignum, null: false
+      column :id, :uuid, primary_key: true
+      foreign_key :session_id, :ai_chat_sessions, type: :uuid, null: false
       String :role, null: false
       String :body, text: true, null: false
       DateTime :created_at, null: false
