@@ -231,21 +231,25 @@ end
 
 ---
 
-## 認証の位置付け（特殊なケース）
+## 認証・認可の位置付け
 
-Rodauth はセキュリティ関連のため、アプリケーション層とは別に **ミドルウェア** として実装：
+認証は **JWT Bearer token**（`lib/hanami_auth_app/jwt_auth.rb`、Base64URL + HMAC-SHA256 の手動実装）で行う。各 API Action がリクエストの `Authorization` ヘッダからトークンを検証する。
 
 ```
-config.ru
-├── Rack::Session::Cookie          # セッション管理
-├── HanamiAuthApp::RodauthApp      # 認証（Roda + Rodauth）
-└── Hanami.app                      # メインアプリ
+リクエスト
+  ├ Authorization: Bearer <token>
+  ↓
+[Action] JwtAuth.decode(token) → payload["account_id"]（UUIDv7）
+  ↓
+[Usecase] account_id を受け取り、所有権を判定
 ```
 
-**インテグレーション**:
-- Rodauth がセッションに `account_id` を設定
-- Actions はセッションから `account_id` を読む
-- ドメインは認証の詳細を知らない（単に account_id で判定）
+**ポイント**:
+- Actions はトークンを検証して `account_id` を取り出す（セッションは使わない）。
+- **ロール**（`user` / `admin`）はトークンに焼き込まず、`GET /api/me` などで都度 DB から取得する（昇格/降格を即反映するため）。
+- **所有権チェック**は Usecase 層で行う（例: `idea.account_id == account_id` でなければ `Forbidden`）。ドメインは認証の詳細を知らず、account_id で判定するだけ。
+
+> 注: 旧構成では Rodauth + セッションを検討していたが、API ファースト化に伴い JWT Bearer に統一した。
 
 ---
 
