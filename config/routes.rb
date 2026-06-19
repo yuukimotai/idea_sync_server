@@ -28,5 +28,15 @@ module HanamiAuthApp
     get "/api/ai_chat/sessions", to: "api.ai_chat.sessions.get_or_create"
     get "/api/ai_chat/sessions/:session_id/messages", to: "api.ai_chat.messages.index"
     post "/api/ai_chat/sessions/:session_id/messages", to: "api.ai_chat.messages.create"
+
+    # API routes for meetings (RBAC)
+    get "/api/meetings", to: "api.meetings.index"
+    post "/api/meetings", to: "api.meetings.create"
+    get "/api/meetings/:id", to: "api.meetings.show"
+    patch "/api/meetings/:id/status", to: "api.meetings.update_status"
+    get "/api/meetings/:id/permissions", to: "api.meetings.permissions"
+    post "/api/meetings/:id/participants", to: "api.meetings.participants.create"
+    post "/api/meetings/:id/roles", to: "api.meetings.roles.create"
+    delete "/api/meetings/:id/roles", to: "api.meetings.roles.delete"
   end
 end

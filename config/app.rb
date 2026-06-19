@@ -20,6 +20,11 @@ module HanamiAuthApp
     require_relative "../lib/hanami_auth_app/domain/ai_chat/ai_chat_message"
     require_relative "../lib/hanami_auth_app/domain/ai_chat/ai_chat_session_repository"
     require_relative "../lib/hanami_auth_app/domain/ai_chat/ai_chat_message_repository"
+    require_relative "../lib/hanami_auth_app/domain/meeting/meeting"
+    require_relative "../lib/hanami_auth_app/domain/meeting/meeting_participant"
+    require_relative "../lib/hanami_auth_app/domain/meeting/meeting_policy"
+    require_relative "../lib/hanami_auth_app/domain/meeting/meeting_repository"
+    require_relative "../lib/hanami_auth_app/domain/meeting/meeting_participant_repository"
 
     # Register repositories lazily (after RODAUTH_DB is initialized)
     register :todo_repository do
@@ -50,6 +55,16 @@ module HanamiAuthApp
     register :ai_chat_message_repository do
       require_relative "../app/repos/ai_chat_message_repository"
       HanamiAuthApp::Repos::AiChatMessageRepository.new
+    end
+
+    register :meeting_repository do
+      require_relative "../app/repos/meeting_repository"
+      HanamiAuthApp::Repos::MeetingRepository.new
+    end
+
+    register :meeting_participant_repository do
+      require_relative "../app/repos/meeting_participant_repository"
+      HanamiAuthApp::Repos::MeetingParticipantRepository.new
     end
   end
 end
