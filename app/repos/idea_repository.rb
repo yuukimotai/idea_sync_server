@@ -1,12 +1,13 @@
 # frozen_string_literal: true
 
+require_relative "../../lib/hanami_auth_app/database"
 require_relative "../../lib/hanami_auth_app/uuid7"
 
 module HanamiAuthApp
   module Repos
     class IdeaRepository < Domain::Idea::IdeaRepository
       def initialize(db = nil)
-        @db = db || Sequel.connect(ENV.fetch("DATABASE_URL"))
+        @db = db || HanamiAuthApp::Database.connection
       end
 
       def create(account_id:, title:, description:)

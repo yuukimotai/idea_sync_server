@@ -9,7 +9,7 @@ Ruby + Hanami 2.3 による **アイデア管理 + AI 壁打ち REST API**。DDD
 - **AI**: Google Gemini API（`gemini-3.1-flash-lite`）でアイデア壁打ち
 - **Webサーバー**: Puma 6（API）／ Falcon（WebSocket・導入中）
 - **データベース**: PostgreSQL 16
-- **ORM**: Sequel
+- **ORM**: Sequel（全リポジトリで**単一の共有接続プール**を使用 → [lib/hanami_auth_app/database.rb](lib/hanami_auth_app/database.rb)）
 - **主キー**: UUIDv7（時系列順・列挙耐性）
 - **API**: REST（JSON）＋ WebSocket（リアルタイム・作業中）
 - **コンテナ**: Docker / Docker Compose
