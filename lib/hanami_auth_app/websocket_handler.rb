@@ -21,8 +21,9 @@ module HanamiAuthApp
       attr_reader :connections, :mutex
     end
 
-    def initialize(app)
+    def initialize(app, message_repository: nil)
       @app = app
+      @message_repository = message_repository
     end
 
     def call(env)
@@ -67,8 +68,8 @@ module HanamiAuthApp
         body = data["body"].to_s.strip
         next if body.empty?
 
-        msg = HanamiAuthApp::App.container.resolve(:message_repository)
-          .create(account_id: account_id, body: body)
+        repo = @message_repository || HanamiAuthApp::App.container.resolve(:message_repository)
+        msg = repo.create(account_id: account_id, body: body)
         broadcast(
           id: msg.id,
           account_id: msg.account_id,

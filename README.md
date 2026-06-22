@@ -7,11 +7,11 @@ Ruby + Hanami 2.3 による **アイデア管理 + AI 壁打ち REST API**。DDD
 - **フレームワーク**: Hanami 2.3
 - **認証**: JWT（Base64URL + HMAC-SHA256 手動実装）
 - **AI**: Google Gemini API（`gemini-3.1-flash-lite`）でアイデア壁打ち
-- **Webサーバー**: Puma 6（API）／ Falcon（WebSocket・導入中）
+- **Webサーバー**: Hanami（HTTP API）／ Falcon（WebSocket 専用プロセス・別ポート）
 - **データベース**: PostgreSQL 16
 - **ORM**: Sequel（全リポジトリで**単一の共有接続プール**を使用 → [lib/hanami_auth_app/database.rb](lib/hanami_auth_app/database.rb)）
 - **主キー**: UUIDv7（時系列順・列挙耐性）
-- **API**: REST（JSON）＋ WebSocket（リアルタイム・作業中）
+- **API**: REST（JSON）＋ WebSocket（リアルタイム）
 - **コンテナ**: Docker / Docker Compose
 - **言語**: Ruby 3.2
 
@@ -24,19 +24,28 @@ Ruby + Hanami 2.3 による **アイデア管理 + AI 壁打ち REST API**。DDD
 - ✅ **所有権チェック** — 各リソースは本人のみアクセス可（他人のものは 403）
 - ✅ **UUIDv7 主キー** — 連番 ID の列挙攻撃に対する多層防御
 - ✅ **AI 壁打ち** — Gemini と 1 アイデア 1 セッションで対話、ログを永続化
+- ✅ **WebSocket リアルタイムチャット** — Falcon 単プロセス（`:3001`）で WS 専用サーバーを分離
 
-## リアルタイム / WebSocket（作業中）
+## リアルタイム / WebSocket
 
-グローバルチャットを **ポーリング → WebSocket** へ移行中。現状は **まだポーリング**（チャットは10秒間隔で取得）で、WebSocket は未完成。
+グローバルチャットは **WebSocket** でリアルタイム双方向通信する。HTTP API（Hanami）と **プロセスを分離**して Falcon 単体で動作させている。
 
-これまでの調査結果（次回の前提）:
+### アーキテクチャ
 
-- **Falcon を導入し、API が Falcon でも動くようにした。** Falcon の `rack.input` は非巻き戻し(streaming)で `request.body.read` が空になるため、ボディを `StringIO` にバッファする `RewindableInput` ミドルウェアを追加（[lib/hanami_auth_app/rewindable_input.rb](lib/hanami_auth_app/rewindable_input.rb)）。これで POST/PATCH も Falcon で正常動作。
-- **WebSocket をHanamiのミドルウェアとして挟む方式は不採用。** `async-websocket` の Rack アダプタ（`Async::WebSocket::Adapters::Rack.open`）は「`run` する単独アプリ」前提で、Hanami のミドルウェアスタックに挟むとアップグレード要求がハンドラまで dispatch されない。
-- **次の一手**: WebSocket を **独立した Falcon プロセス**（別ポート、`run lambda { … }` の単独 Rack アプリ）として切り出し、`JWT_SECRET` 共有・同一DBで運用する。API は Puma のまま。
-- 認証は **httpOnly Cookie の `auth_token`** をハンドシェイクから読む（[lib/hanami_auth_app/websocket_handler.rb](lib/hanami_auth_app/websocket_handler.rb) に実装済み・単独プロセス化待ち）。
+```
+ブラウザ ──WS── Falcon :3001 (cable.ru)   ← WebSocket 専用プロセス
+ブラウザ ──HTTP─ Hanami :2300              ← REST API プロセス
+```
 
-> 現状の `config.ru` には WebsocketHandler が暫定でミドルウェアとして載っているが、上記の通り単独プロセスへ移す予定。API（Puma/Falcon とも）の動作には影響しない。
+**分離の理由**: `async-websocket` の Rack アダプタは Falcon（async I/O）上でのみ正しく動く。Hanami の通常 HTTP スタックに混在させると 101 Upgrade が正常にディスパッチされないため、WS だけ Falcon の単独プロセスに切り出した。
+
+### 認証
+
+WS ハンドシェイク時に `?token=<JWT>` クエリパラメータで認証する。クライアント（Next.js）は httpOnly Cookie に保存された JWT を `/api/ws-token` サーバーサイドルート経由で取得し、WS URL に付与する。
+
+### ブロードキャスト
+
+プロセス内の接続レジストリ（`Set` + `Mutex`）を使用。**Falcon `--count 1`（単一プロセス）が前提**。複数プロセス化する場合は Redis pub/sub 等が必要。
 
 ## クイックスタート
 
@@ -51,7 +60,13 @@ docker compose up -d   # マイグレーションも自動実行
 bundle install
 # .env.local に DATABASE_URL / GEMINI_API_KEY / JWT_SECRET を設定
 bundle exec hanami db create && bundle exec hanami db migrate
-bundle exec puma -p 2300
+
+# 開発時は foreman 等で Procfile.dev をまとめて起動
+bundle exec foreman start -f Procfile.dev
+
+# または個別に起動
+bundle exec hanami server                                              # :2300
+bundle exec falcon serve --count 1 --bind tcp://localhost:3001 --config cable.ru  # :3001
 ```
 
 ### 必要な環境変数
@@ -60,7 +75,7 @@ bundle exec puma -p 2300
 |------|------|
 | `DATABASE_URL` | PostgreSQL 接続文字列 |
 | `GEMINI_API_KEY` | Gemini API キー（AI 壁打ち用） |
-| `JWT_SECRET` | JWT 署名鍵（本番では必須・ランダム値） |
+| `JWT_SECRET` | JWT 署名鍵（HTTP API・WS 両プロセスで共有。本番では必須） |
 
 ## API エンドポイント
 
@@ -96,10 +111,10 @@ bundle exec puma -p 2300
 
 ### グローバルチャット
 
-| メソッド | URL | 説明 |
-|---------|-----|------|
-| `GET` | `/api/messages` | 全メッセージ取得（最新順・全ユーザー共有） |
-| `POST` | `/api/messages` | メッセージ作成 |
+| メソッド | URL | サーバー | 説明 |
+|---------|-----|---------|------|
+| `GET` | `/api/messages` | Hanami :2300 | 全メッセージ取得（最新順・全ユーザー共有） |
+| `WS` | `/cable?token=<JWT>` | Falcon :3001 | リアルタイム送受信（JWT クエリ認証） |
 
 **Idea / AI チャット / `/api/me` は Bearer token で保護されています。**
 
@@ -129,6 +144,7 @@ idea_sync_server/
 │   │   └── ai_chat/              #   AiChatSession / AiChatMessage
 │   ├── jwt_auth.rb               # JWT（Base64URL + HMAC-SHA256）
 │   ├── gemini_client.rb          # Gemini API クライアント
+│   ├── websocket_handler.rb      # WS ハンドラ（認証・ブロードキャスト）
 │   └── uuid7.rb                  # UUIDv7 生成（RFC 9562）
 ├── app/
 │   ├── usecases/                 # アプリケーション層（操作）
@@ -138,7 +154,10 @@ idea_sync_server/
 │       ├── me/                   # GET /api/me
 │       ├── ideas/                # Idea CRUD（所有権チェック）
 │       ├── ai_chat/              # AI 壁打ち
-│       └── messages/             # グローバルチャット
+│       └── messages/             # グローバルチャット（REST）
+├── cable.ru                      # Falcon WS 専用プロセスの entrypoint（:3001）
+├── config.ru                     # Hanami HTTP API の entrypoint（:2300）
+├── Procfile.dev                  # web / ws / assets の 3 プロセス定義
 ├── config/{app.rb,routes.rb,db/migrate/}
 ├── Dockerfile
 └── docker-compose.yml
@@ -235,7 +254,8 @@ docker compose down         # 停止
 - [ ] 会議（meetings）テーブルと参加者・機能ロール
 - [ ] 認証処理の共通化（AuthenticatedAction 基底）
 - [ ] 機能ロールの Policy / 権限マトリクス
-- [ ] WebSocket の会議スコープ化
+- [ ] WebSocket の会議スコープ化（現状はグローバルチャットのみ）
+- [ ] WS 複数プロセス対応（Redis pub/sub によるブロードキャスト）
 - [ ] ユニット / 統合テストの拡充
 
 ## 参考
