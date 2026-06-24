@@ -6,14 +6,18 @@ module HanamiAuthApp
       class Meeting
         STATUSES = %w[draft active closed].freeze
 
-        attr_reader :id, :idea_id, :created_by, :title, :status, :created_at, :updated_at
+        PURPOSES = %w[ideation refinement brainstorm].freeze
 
-        def initialize(id:, idea_id:, created_by:, title:, status: "draft", created_at: nil, updated_at: nil)
+        attr_reader :id, :idea_id, :created_by, :title, :status, :purpose, :passcode, :created_at, :updated_at
+
+        def initialize(id:, created_by:, title:, status: "draft", purpose: "brainstorm", passcode: nil, idea_id: nil, created_at: nil, updated_at: nil)
           @id = id
           @idea_id = idea_id
           @created_by = created_by
           @title = title
           @status = status
+          @purpose = purpose
+          @passcode = passcode
           @created_at = created_at
           @updated_at = updated_at
         end

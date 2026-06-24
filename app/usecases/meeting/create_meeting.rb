@@ -9,19 +9,24 @@ module HanamiAuthApp
           @idea_repository = idea_repository
         end
 
-        def call(account:, idea_id:, title:)
-          return Domain::Result.err("Forbidden") unless account.admin?
-
+        def call(account:, title:, purpose:, idea_id: nil)
           title = title.to_s.strip
           return Domain::Result.err("Title cannot be blank") if title.empty?
 
-          idea = @idea_repository.find_by_id(idea_id)
-          return Domain::Result.err("Idea not found") unless idea
+          unless Domain::Meeting::Meeting::PURPOSES.include?(purpose.to_s)
+            return Domain::Result.err("Invalid purpose")
+          end
+
+          if idea_id
+            idea = @idea_repository.find_by_id(idea_id)
+            return Domain::Result.err("Idea not found") unless idea
+          end
 
           meeting = @meeting_repository.create(
             idea_id: idea_id,
             created_by: account.id,
-            title: title
+            title: title,
+            purpose: purpose
           )
           Domain::Result.ok(meeting: meeting)
         rescue => e

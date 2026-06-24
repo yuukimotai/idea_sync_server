@@ -10,6 +10,8 @@ module HanamiAuthApp
         created_by: meeting.created_by,
         title: meeting.title,
         status: meeting.status,
+        purpose: meeting.purpose,
+        passcode: meeting.passcode,
         created_at: meeting.created_at,
         updated_at: meeting.updated_at
       }

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "../../../usecases/meeting/create_meeting"
+require_relative "../../../usecases/meeting/join_meeting"
 require_relative "../../../../lib/hanami_auth_app/action_auth"
 require_relative "../../../../lib/hanami_auth_app/meeting_serializer"
 
@@ -8,7 +8,7 @@ module HanamiAuthApp
   module Actions
     module API
       module Meetings
-        class Create < HanamiAuthApp::Action
+        class Join < HanamiAuthApp::Action
           include HanamiAuthApp::ActionAuth
           include MeetingSerializer
 
@@ -18,20 +18,22 @@ module HanamiAuthApp
 
             params = JSON.parse(request.body.read)
 
-            usecase = Usecases::Meeting::CreateMeeting.new(
+            usecase = Usecases::Meeting::JoinMeeting.new(
               HanamiAuthApp::App.container.resolve(:meeting_repository),
-              HanamiAuthApp::App.container.resolve(:idea_repository)
+              HanamiAuthApp::App.container.resolve(:meeting_participant_repository)
             )
             result = usecase.call(
-              account: account,
-              title: params["title"],
-              purpose: params["purpose"],
-              idea_id: params["idea_id"]
+              account_id: account.id,
+              meeting_id: request.params[:id],
+              passcode: params["passcode"].to_s.strip.upcase
             )
 
             if result.success?
-              response.status = 201
-              response.body = { meeting: meeting_to_json(result.value[:meeting]) }.to_json
+              response.status = 200
+              response.body = {
+                meeting: meeting_to_json(result.value[:meeting]),
+                participant: participant_to_json(result.value[:participant])
+              }.to_json
             else
               response.status = error_status(result.error)
               response.body = { error: result.error }.to_json

@@ -4,7 +4,11 @@ module HanamiAuthApp
   module Domain
     module Meeting
       class MeetingRepository
-        def create(idea_id:, created_by:, title:)
+        def create(created_by:, title:, purpose:, idea_id: nil)
+          raise NotImplementedError
+        end
+
+        def find_by_id_and_passcode(id, passcode)
           raise NotImplementedError
         end
 
