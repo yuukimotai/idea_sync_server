@@ -8,10 +8,11 @@ module HanamiAuthApp
 
         PURPOSES = %w[ideation refinement brainstorm].freeze
 
-        attr_reader :id, :idea_id, :created_by, :title, :status, :purpose, :passcode, :created_at, :updated_at
+        attr_reader :id, :room_code, :idea_id, :created_by, :title, :status, :purpose, :passcode, :created_at, :updated_at
 
-        def initialize(id:, created_by:, title:, status: "draft", purpose: "brainstorm", passcode: nil, idea_id: nil, created_at: nil, updated_at: nil)
+        def initialize(id:, created_by:, title:, status: "draft", purpose: "brainstorm", passcode: nil, room_code: nil, idea_id: nil, created_at: nil, updated_at: nil)
           @id = id
+          @room_code = room_code
           @idea_id = idea_id
           @created_by = created_by
           @title = title

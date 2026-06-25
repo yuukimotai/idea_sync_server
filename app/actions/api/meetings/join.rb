@@ -24,7 +24,7 @@ module HanamiAuthApp
             )
             result = usecase.call(
               account_id: account.id,
-              meeting_id: request.params[:id],
+              room_code: request.params[:id].to_s.strip.upcase,
               passcode: params["passcode"].to_s.strip.upcase
             )
 

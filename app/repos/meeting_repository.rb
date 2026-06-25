@@ -20,6 +20,7 @@ module HanamiAuthApp
           title: title,
           purpose: purpose,
           passcode: generate_passcode,
+          room_code: generate_room_code,
           status: "draft",
           created_at: Time.now,
           updated_at: Time.now
@@ -29,6 +30,16 @@ module HanamiAuthApp
 
       def find_by_id_and_passcode(id, passcode)
         row = @db[:meetings].where(id: id, passcode: passcode).first
+        to_entity(row) if row
+      end
+
+      def find_by_room_code(room_code)
+        row = @db[:meetings].where(room_code: room_code).first
+        to_entity(row) if row
+      end
+
+      def find_by_room_code_and_passcode(room_code, passcode)
+        row = @db[:meetings].where(room_code: room_code, passcode: passcode).first
         to_entity(row) if row
       end
 
@@ -60,18 +71,26 @@ module HanamiAuthApp
 
       private
 
-      PASSCODE_CHARS = ("A".."Z").to_a + ("0".."9").to_a
+      CODE_CHARS = ("A".."Z").to_a + ("0".."9").to_a
 
       def generate_passcode
         loop do
-          code = Array.new(6) { PASSCODE_CHARS.sample }.join
+          code = Array.new(6) { CODE_CHARS.sample }.join
           return code unless @db[:meetings].where(passcode: code).first
+        end
+      end
+
+      def generate_room_code
+        loop do
+          code = Array.new(12) { CODE_CHARS.sample }.join
+          return code unless @db[:meetings].where(room_code: code).first
         end
       end
 
       def to_entity(row)
         Domain::Meeting::Meeting.new(
           id: row[:id],
+          room_code: row[:room_code],
           idea_id: row[:idea_id],
           created_by: row[:created_by],
           title: row[:title],

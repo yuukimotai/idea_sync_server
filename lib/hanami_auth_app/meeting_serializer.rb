@@ -6,6 +6,7 @@ module HanamiAuthApp
     def meeting_to_json(meeting)
       {
         id: meeting.id,
+        room_code: meeting.room_code,
         idea_id: meeting.idea_id,
         created_by: meeting.created_by,
         title: meeting.title,

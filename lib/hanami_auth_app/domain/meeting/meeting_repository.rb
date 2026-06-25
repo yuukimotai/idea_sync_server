@@ -12,6 +12,14 @@ module HanamiAuthApp
           raise NotImplementedError
         end
 
+        def find_by_room_code(room_code)
+          raise NotImplementedError
+        end
+
+        def find_by_room_code_and_passcode(room_code, passcode)
+          raise NotImplementedError
+        end
+
         def find_by_id(id)
           raise NotImplementedError
         end

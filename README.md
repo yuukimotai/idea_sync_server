@@ -128,6 +128,8 @@ bundle exec falcon serve --count 1 --bind tcp://localhost:3001 --config cable.ru
 | `GET` | `/api/meetings/:id` | 会議詳細取得 |
 | `POST` | `/api/meetings/:id/join` | パスコードで入室 → `{meeting, participant}` |
 
+会議部屋には **ルームコード**（12文字英数字）と **パスコード**（6文字）の2つが発行される。入室は UUID ではなくルームコードで行う。
+
 **リクエスト例（会議作成）**:
 ```bash
 curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
@@ -135,13 +137,14 @@ curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/jso
   http://localhost:2300/api/meetings
 # purpose: "ideation" | "refinement" | "brainstorm"
 # idea_id は省略可（アイデアなしのブレスト部屋）
+# → レスポンスに room_code（12文字）と passcode（6文字）が含まれる
 ```
 
 **リクエスト例（入室）**:
 ```bash
 curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"passcode":"AB12CD"}' \
-  http://localhost:2300/api/meetings/<meeting_uuid>/join
+  http://localhost:2300/api/meetings/<room_code>/join
 ```
 
 **Idea / AI チャット / `/api/me` / 会議 は Bearer token で保護されています。**
