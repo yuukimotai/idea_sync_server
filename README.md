@@ -51,8 +51,12 @@ WS ハンドシェイク時に `?token=<JWT>` クエリパラメータで認証�
 
 ```bash
 cd idea_sync_server
-docker compose up -d   # マイグレーションも自動実行
+docker compose up -d
+# → app(:2300) / ws(:3001) / client(:3000) / db(:5433) が一括起動
+# → DB マイグレーションも自動実行
 ```
+
+ブラウザで `http://localhost:3000` にアクセスすれば使い始められる。
 
 ローカルで直接動かす場合:
 
@@ -116,7 +120,31 @@ bundle exec falcon serve --count 1 --bind tcp://localhost:3001 --config cable.ru
 | `GET` | `/api/messages` | Hanami :2300 | 全メッセージ取得（最新順・全ユーザー共有） |
 | `WS` | `/cable?token=<JWT>` | Falcon :3001 | リアルタイム送受信（JWT クエリ認証） |
 
-**Idea / AI チャット / `/api/me` は Bearer token で保護されています。**
+### 会議（Bearer 認証）
+
+| メソッド | URL | 説明 |
+|---------|-----|------|
+| `POST` | `/api/meetings` | 会議部屋を作成 → `{meeting: {..., passcode}}` |
+| `GET` | `/api/meetings/:id` | 会議詳細取得 |
+| `POST` | `/api/meetings/:id/join` | パスコードで入室 → `{meeting, participant}` |
+
+**リクエスト例（会議作成）**:
+```bash
+curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"title":"朝のブレスト","purpose":"brainstorm"}' \
+  http://localhost:2300/api/meetings
+# purpose: "ideation" | "refinement" | "brainstorm"
+# idea_id は省略可（アイデアなしのブレスト部屋）
+```
+
+**リクエスト例（入室）**:
+```bash
+curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"passcode":"AB12CD"}' \
+  http://localhost:2300/api/meetings/<meeting_uuid>/join
+```
+
+**Idea / AI チャット / `/api/me` / 会議 は Bearer token で保護されています。**
 
 ```bash
 curl -H "Authorization: Bearer <JWT_TOKEN>" http://localhost:2300/api/ideas
@@ -141,26 +169,31 @@ idea_sync_server/
 │   ├── domain/                   # ドメイン層（エンティティ・Repository IF）
 │   │   ├── account/              #   Account（id, email, role）
 │   │   ├── idea/                 #   Idea
-│   │   └── ai_chat/              #   AiChatSession / AiChatMessage
+│   │   ├── ai_chat/              #   AiChatSession / AiChatMessage
+│   │   ├── meeting/              #   Meeting（purpose / passcode / status）
+│   │   └── meeting_participant/  #   MeetingParticipant
 │   ├── jwt_auth.rb               # JWT（Base64URL + HMAC-SHA256）
 │   ├── gemini_client.rb          # Gemini API クライアント
+│   ├── meeting_serializer.rb     # Meeting → JSON ヘルパー
 │   ├── websocket_handler.rb      # WS ハンドラ（認証・ブロードキャスト）
 │   └── uuid7.rb                  # UUIDv7 生成（RFC 9562）
 ├── app/
 │   ├── usecases/                 # アプリケーション層（操作）
+│   │   └── meeting/              #   CreateMeeting / JoinMeeting
 │   ├── repos/                    # インフラ層（Sequel 実装・uuid 生成）
 │   └── actions/api/
 │       ├── accounts/             # 登録 / ログイン
 │       ├── me/                   # GET /api/me
 │       ├── ideas/                # Idea CRUD（所有権チェック）
 │       ├── ai_chat/              # AI 壁打ち
-│       └── messages/             # グローバルチャット（REST）
+│       ├── messages/             # グローバルチャット（REST）
+│       └── meetings/             # 会議 CRUD + join
 ├── cable.ru                      # Falcon WS 専用プロセスの entrypoint（:3001）
 ├── config.ru                     # Hanami HTTP API の entrypoint（:2300）
 ├── Procfile.dev                  # web / ws / assets の 3 プロセス定義
 ├── config/{app.rb,routes.rb,db/migrate/}
 ├── Dockerfile
-└── docker-compose.yml
+└── docker-compose.yml            # app / ws / client / db を一括管理
 ```
 
 ## 使用例
@@ -243,17 +276,20 @@ Token = header.payload.signature
 ## 開発フロー
 
 ```bash
-docker compose up -d        # 起動
-docker compose logs -f app  # ログ
-docker compose restart app  # 再起動（変更反映）
-docker compose down         # 停止
+docker compose up -d          # 全サービス起動（app / ws / client / db）
+docker compose logs -f app    # Hanami API ログ
+docker compose logs -f ws     # Falcon WS ログ
+docker compose logs -f client # Next.js ログ
+docker compose restart app    # Hanami 再起動（変更反映）
+docker compose restart ws     # Falcon 再起動
+docker compose down           # 停止
 ```
 
 ## 次のステップ
 
-- [ ] 会議（meetings）テーブルと参加者・機能ロール
+- [x] 会議（meetings）テーブルと参加者（パスコード入室）
+- [ ] 会議内の機能ロール（タイムキーパー / 進行 / 書記 / 発表）
 - [ ] 認証処理の共通化（AuthenticatedAction 基底）
-- [ ] 機能ロールの Policy / 権限マトリクス
 - [ ] WebSocket の会議スコープ化（現状はグローバルチャットのみ）
 - [ ] WS 複数プロセス対応（Redis pub/sub によるブロードキャスト）
 - [ ] ユニット / 統合テストの拡充
