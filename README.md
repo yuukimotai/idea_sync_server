@@ -24,11 +24,11 @@ Ruby + Hanami 2.3 による **アイデア管理 + AI 壁打ち REST API**。DDD
 - ✅ **所有権チェック** — 各リソースは本人のみアクセス可（他人のものは 403）
 - ✅ **UUIDv7 主キー** — 連番 ID の列挙攻撃に対する多層防御
 - ✅ **AI 壁打ち** — Gemini と 1 アイデア 1 セッションで対話、ログを永続化
-- ✅ **WebSocket リアルタイムチャット** — Falcon 単プロセス（`:3001`）で WS 専用サーバーを分離
+- ✅ **WebSocket リアルタイムチャット** — Falcon 単プロセス（`:3001`）でグローバル＆会議室チャットを WS 専用サーバーとして分離
 
 ## リアルタイム / WebSocket
 
-グローバルチャットは **WebSocket** でリアルタイム双方向通信する。HTTP API（Hanami）と **プロセスを分離**して Falcon 単体で動作させている。
+グローバルチャットと会議室チャットを **WebSocket** でリアルタイム双方向通信する。HTTP API（Hanami）と **プロセスを分離**して Falcon 単体で動作させている。
 
 ### アーキテクチャ
 
@@ -43,9 +43,20 @@ Ruby + Hanami 2.3 による **アイデア管理 + AI 壁打ち REST API**。DDD
 
 WS ハンドシェイク時に `?token=<JWT>` クエリパラメータで認証する。クライアント（Next.js）は httpOnly Cookie に保存された JWT を `/api/ws-token` サーバーサイドルート経由で取得し、WS URL に付与する。
 
+### チャンネルスコープ
+
+WS 接続は **グローバル** または **会議室単位** にスコープされる。
+
+| WS URL | チャンネル |
+|--------|----------|
+| `/cable?token=<JWT>` | グローバルチャット（全員共有） |
+| `/cable?token=<JWT>&room_code=<12文字>` | 会議室チャット（ルームコード単位で分離） |
+
 ### ブロードキャスト
 
-プロセス内の接続レジストリ（`Set` + `Mutex`）を使用。**Falcon `--count 1`（単一プロセス）が前提**。複数プロセス化する場合は Redis pub/sub 等が必要。
+プロセス内の接続レジストリ（`Hash<room_key, Set>` + `Mutex`）を使用。`room_key` は `"global"` またはルームコード文字列。**Falcon `--count 1`（単一プロセス）が前提**。複数プロセス化する場合は Redis pub/sub 等が必要。
+
+会議室チャットのメッセージは `messages.meeting_id`（UUID FK、null = グローバル）で区別され DB に永続化される。
 
 ## クイックスタート
 
@@ -135,6 +146,8 @@ bundle exec falcon serve --count 1 --bind tcp://localhost:3001 --config cable.ru
 | `POST` | `/api/meetings` | 会議部屋を作成 → `{meeting: {..., passcode}}` |
 | `GET` | `/api/meetings/:id` | 会議詳細取得 |
 | `POST` | `/api/meetings/:id/join` | パスコードで入室 → `{meeting, participant}` |
+| `GET` | `/api/meetings/:id/messages` | 会議室のチャット履歴取得（最新50件） |
+| `WS` | `/cable?token=<JWT>&room_code=<code>` | Falcon :3001 | 会議室リアルタイムチャット |
 
 会議部屋には **ルームコード**（12文字英数字）と **パスコード**（6文字）の2つが発行される。入室は UUID ではなくルームコードで行う。
 

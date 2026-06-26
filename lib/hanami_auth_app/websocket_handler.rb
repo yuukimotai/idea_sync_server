@@ -7,23 +7,25 @@ require "async/websocket/adapters/rack"
 require_relative "jwt_auth"
 
 module HanamiAuthApp
-  # グローバルチャットの WebSocket。Falcon(async)上で動作する。
-  # 認証: httpOnly Cookie の auth_token（JSに出さない）。テスト用に ?token= も許可。
-  # ブロードキャスト: プロセス内の接続レジストリ（Falcon --count 1 前提。
-  # 複数プロセス化する場合は Redis pub/sub 等が必要）。
+  # WebSocket server for global chat and per-meeting room chat.
+  # room_code=xxx in query string → meeting room. omitted → global ("global" key).
+  # Falcon --count 1 single-process assumed; scale with Redis pub/sub if needed.
   class WebsocketHandler
     PATH = "/cable"
+    GLOBAL_ROOM = "global"
 
-    @connections = Set.new
+    # { room_key => Set<connection> }
+    @connections = Hash.new { |h, k| h[k] = Set.new }
     @mutex = Mutex.new
 
     class << self
       attr_reader :connections, :mutex
     end
 
-    def initialize(app, message_repository: nil)
+    def initialize(app, message_repository: nil, meeting_repository: nil)
       @app = app
       @message_repository = message_repository
+      @meeting_repository = meeting_repository
     end
 
     def call(env)
@@ -32,8 +34,12 @@ module HanamiAuthApp
       account_id = authenticate(env)
       return [401, { "content-type" => "text/plain" }, ["Unauthorized"]] unless account_id
 
+      params    = Rack::Utils.parse_query(env["QUERY_STRING"])
+      room_code = params["room_code"]
+      room_key  = room_code || GLOBAL_ROOM
+
       Async::WebSocket::Adapters::Rack.open(env) do |connection|
-        handle_connection(connection, account_id)
+        handle_connection(connection, account_id, room_key, room_code)
       end || [400, { "content-type" => "text/plain" }, ["Expected WebSocket upgrade"]]
     end
 
@@ -58,8 +64,10 @@ module HanamiAuthApp
       nil
     end
 
-    def handle_connection(connection, account_id)
-      self.class.mutex.synchronize { self.class.connections << connection }
+    def handle_connection(connection, account_id, room_key, room_code)
+      self.class.mutex.synchronize { self.class.connections[room_key] << connection }
+
+      meeting_id = resolve_meeting_id(room_code)
 
       while (message = connection.read)
         data = parse_message(message)
@@ -69,16 +77,26 @@ module HanamiAuthApp
         next if body.empty?
 
         repo = @message_repository || HanamiAuthApp::App.container.resolve(:message_repository)
-        msg = repo.create(account_id: account_id, body: body)
-        broadcast(
-          id: msg.id,
+        msg  = repo.create(account_id: account_id, body: body, meeting_id: meeting_id)
+        broadcast(room_key,
+          id:         msg.id,
           account_id: msg.account_id,
-          body: msg.body,
-          created_at: msg.created_at
-        )
+          body:       msg.body,
+          meeting_id: msg.meeting_id,
+          created_at: msg.created_at)
       end
     ensure
-      self.class.mutex.synchronize { self.class.connections.delete(connection) }
+      self.class.mutex.synchronize { self.class.connections[room_key].delete(connection) }
+    end
+
+    def resolve_meeting_id(room_code)
+      return nil unless room_code
+
+      repo = @meeting_repository
+      return nil unless repo
+
+      meeting = repo.find_by_room_code(room_code)
+      meeting&.id
     end
 
     def parse_message(message)
@@ -87,15 +105,14 @@ module HanamiAuthApp
       nil
     end
 
-    def broadcast(payload)
+    def broadcast(room_key, payload)
       json = JSON.generate(payload)
-      # await(write)中はロックを持たないよう、スナップショットを取ってから送信する
-      targets = self.class.mutex.synchronize { self.class.connections.dup }
+      targets = self.class.mutex.synchronize { self.class.connections[room_key].dup }
       targets.each do |conn|
         conn.write(json)
         conn.flush
       rescue StandardError
-        self.class.mutex.synchronize { self.class.connections.delete(conn) }
+        self.class.mutex.synchronize { self.class.connections[room_key].delete(conn) }
       end
     end
   end

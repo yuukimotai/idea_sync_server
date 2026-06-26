@@ -35,6 +35,7 @@ module HanamiAuthApp
     get "/api/meetings/:id", to: "api.meetings.show"
     patch "/api/meetings/:id/status", to: "api.meetings.update_status"
     post "/api/meetings/:id/join", to: "api.meetings.join"
+    get "/api/meetings/:id/messages", to: "api.meetings.messages.index"
     get "/api/meetings/:id/permissions", to: "api.meetings.permissions"
     post "/api/meetings/:id/participants", to: "api.meetings.participants.create"
     post "/api/meetings/:id/roles", to: "api.meetings.roles.create"

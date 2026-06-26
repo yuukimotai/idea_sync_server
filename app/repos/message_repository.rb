@@ -11,11 +11,12 @@ module HanamiAuthApp
         @db = db || HanamiAuthApp::Database.connection
       end
 
-      def create(account_id:, body:)
+      def create(account_id:, body:, meeting_id: nil)
         id = HanamiAuthApp::Uuid7.generate
         @db[:messages].insert(
           id: id,
           account_id: account_id,
+          meeting_id: meeting_id,
           body: body,
           created_at: Time.now,
           updated_at: Time.now
@@ -25,6 +26,16 @@ module HanamiAuthApp
 
       def list_recent(limit: 50)
         @db[:messages]
+          .where(meeting_id: nil)
+          .order(Sequel.desc(:created_at))
+          .limit(limit)
+          .reverse_order
+          .map { |row| to_entity(row) }
+      end
+
+      def list_by_meeting(meeting_id:, limit: 50)
+        @db[:messages]
+          .where(meeting_id: meeting_id)
           .order(Sequel.desc(:created_at))
           .limit(limit)
           .reverse_order
@@ -42,6 +53,7 @@ module HanamiAuthApp
         Domain::Message::Message.new(
           id: row[:id],
           account_id: row[:account_id],
+          meeting_id: row[:meeting_id],
           body: row[:body],
           created_at: row[:created_at]
         )
