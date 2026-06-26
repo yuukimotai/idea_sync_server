@@ -211,7 +211,7 @@ idea_sync_server/
 │       ├── ideas/                # Idea CRUD（所有権チェック）
 │       ├── ai_chat/              # AI 壁打ち
 │       ├── messages/             # グローバルチャット（REST）
-│       └── meetings/             # 会議 CRUD + join
+│       └── meetings/             # 会議 CRUD + join + messages（会議チャット履歴）
 ├── cable.ru                      # Falcon WS 専用プロセスの entrypoint（:3001）
 ├── config.ru                     # Hanami HTTP API の entrypoint（:2300）
 ├── Procfile.dev                  # web / ws / assets の 3 プロセス定義
@@ -313,9 +313,9 @@ docker compose down           # 停止
 
 - [x] 会議（meetings）テーブルと参加者（パスコード入室）
 - [x] 会議部屋にルームコード（12文字英数字）を導入（UUID より短く共有しやすい）
+- [x] WebSocket の会議スコープ化（room_code 単位の接続レジストリ・messages に meeting_id カラム追加）
 - [ ] 会議内の機能ロール（タイムキーパー / 進行 / 書記 / 発表）
 - [ ] 認証処理の共通化（AuthenticatedAction 基底）
-- [ ] WebSocket の会議スコープ化（現状はグローバルチャットのみ）
 - [ ] WS 複数プロセス対応（Redis pub/sub によるブロードキャスト）
 - [ ] ユニット / 統合テストの拡充
 
