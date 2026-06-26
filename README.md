@@ -49,11 +49,19 @@ WS ハンドシェイク時に `?token=<JWT>` クエリパラメータで認証�
 
 ## クイックスタート
 
+**事前準備**: `.env.local` に `GEMINI_API_KEY` を設定する（AI 壁打ち用）:
+
+```env
+# .env.local（gitignore 済み）
+GEMINI_API_KEY=your_api_key_here
+```
+
 ```bash
 cd idea_sync_server
 docker compose up -d
 # → app(:2300) / ws(:3001) / client(:3000) / db(:5433) が一括起動
 # → DB マイグレーションも自動実行
+# → .env.local の GEMINI_API_KEY が app コンテナに自動で渡される
 ```
 
 ブラウザで `http://localhost:3000` にアクセスすれば使い始められる。
@@ -291,6 +299,7 @@ docker compose down           # 停止
 ## 次のステップ
 
 - [x] 会議（meetings）テーブルと参加者（パスコード入室）
+- [x] 会議部屋にルームコード（12文字英数字）を導入（UUID より短く共有しやすい）
 - [ ] 会議内の機能ロール（タイムキーパー / 進行 / 書記 / 発表）
 - [ ] 認証処理の共通化（AuthenticatedAction 基底）
 - [ ] WebSocket の会議スコープ化（現状はグローバルチャットのみ）
