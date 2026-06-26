@@ -4,6 +4,9 @@ services:
     command: bundle exec puma -C config/puma.rb
     ports:
       - "2300:2300"
+    env_file:
+      - path: .env.local
+        required: false
     environment:
       DATABASE_URL: postgres://postgres:password@db/hanami_auth_app_development
       SESSION_SECRET: dev-secret-please-change-in-production-must-be-at-least-64-characters-long
