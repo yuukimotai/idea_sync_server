@@ -12,11 +12,12 @@ module HanamiAuthApp
         end
 
         def call(account:, meeting_id:)
-          meeting = @meeting_repository.find_by_id(meeting_id)
+          meeting = @meeting_repository.find_by_room_code(meeting_id) ||
+                    @meeting_repository.find_by_id(meeting_id)
           return Domain::Result.err("Meeting not found") unless meeting
 
           mine = @participant_repository.find_participation(
-            meeting_id: meeting_id, account_id: account.id
+            meeting_id: meeting.id, account_id: account.id
           )
           policy = Domain::Meeting::MeetingPolicy.new(account: account, participant: mine)
           Domain::Result.ok(capabilities: policy.capabilities)

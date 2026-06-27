@@ -20,23 +20,24 @@ module HanamiAuthApp
             return Domain::Result.err("Invalid role")
           end
 
-          meeting = @meeting_repository.find_by_id(meeting_id)
+          meeting = @meeting_repository.find_by_room_code(meeting_id) ||
+                    @meeting_repository.find_by_id(meeting_id)
           return Domain::Result.err("Meeting not found") unless meeting
 
           target = @account_repository.find_by_id(target_account_id)
           return Domain::Result.err("Account not found") unless target
 
           participant = @participant_repository.find_participation(
-            meeting_id: meeting_id, account_id: target_account_id
+            meeting_id: meeting.id, account_id: target_account_id
           )
           participant ||= @participant_repository.add(
-            meeting_id: meeting_id, account_id: target_account_id
+            meeting_id: meeting.id, account_id: target_account_id
           )
 
           @participant_repository.assign_role(participant_id: participant.id, role: role)
 
           updated = @participant_repository.find_participation(
-            meeting_id: meeting_id, account_id: target_account_id
+            meeting_id: meeting.id, account_id: target_account_id
           )
           Domain::Result.ok(participant: updated)
         rescue => e
