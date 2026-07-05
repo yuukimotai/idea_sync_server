@@ -197,6 +197,7 @@ idea_sync_server/
 │   │   ├── meeting/              #   Meeting（purpose / passcode / status）
 │   │   └── meeting_participant/  #   MeetingParticipant
 │   ├── jwt_auth.rb               # JWT（Base64URL + HMAC-SHA256）
+│   ├── action_auth.rb            # API アクション共通の認証モジュール（authenticate / error_status）
 │   ├── gemini_client.rb          # Gemini API クライアント
 │   ├── meeting_serializer.rb     # Meeting → JSON ヘルパー
 │   ├── websocket_handler.rb      # WS ハンドラ（認証・ブロードキャスト）
@@ -297,6 +298,17 @@ Token = header.payload.signature
 - 現状トークンに有効期限（`exp`）は無い。
 - `account_id` は UUIDv7。ロールはトークンに含めず、毎リクエスト DB から取得する。
 
+### ActionAuth（全 API アクション共通）
+
+認証が必要な API アクションは全て `lib/hanami_auth_app/action_auth.rb` の `ActionAuth` モジュールを include し、
+
+```ruby
+account = authenticate(request, response)
+return unless account
+```
+
+の 2 行で認証する。`authenticate` は Bearer トークンを検証し、role 込みの **Account エンティティ**を返す（失敗時は response を 401 にして nil）。Usecase のエラー文字列 → HTTP ステータスの変換ヘルパー `error_status` も同モジュールが提供する。
+
 ## 開発フロー
 
 ```bash
@@ -315,7 +327,7 @@ docker compose down           # 停止
 - [x] 会議部屋にルームコード（12文字英数字）を導入（UUID より短く共有しやすい）
 - [x] WebSocket の会議スコープ化（room_code 単位の接続レジストリ・messages に meeting_id カラム追加）
 - [x] 会議内の機能ロール（タイムキーパー / 進行 / 書記 / 発表）
-- [ ] 認証処理の共通化（AuthenticatedAction 基底）
+- [x] 認証処理の共通化（全 API アクションを ActionAuth モジュールに統一）
 - [ ] WS 複数プロセス対応（Redis pub/sub によるブロードキャスト）
 - [ ] ユニット / 統合テストの拡充
 

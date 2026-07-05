@@ -233,21 +233,24 @@ end
 
 ## 認証・認可の位置付け
 
-認証は **JWT Bearer token**（`lib/hanami_auth_app/jwt_auth.rb`、Base64URL + HMAC-SHA256 の手動実装）で行う。各 API Action がリクエストの `Authorization` ヘッダからトークンを検証する。
+認証は **JWT Bearer token**（`lib/hanami_auth_app/jwt_auth.rb`、Base64URL + HMAC-SHA256 の手動実装）で行う。検証ロジックは `lib/hanami_auth_app/action_auth.rb` の **ActionAuth モジュール**に集約されており、認証が必要な Action は include して `authenticate` を呼ぶだけ。
 
 ```
 リクエスト
   ├ Authorization: Bearer <token>
   ↓
-[Action] JwtAuth.decode(token) → payload["account_id"]（UUIDv7）
-  ↓
-[Usecase] account_id を受け取り、所有権を判定
+[Action] include ActionAuth
+         account = authenticate(request, response)   # 失敗時は 401 をセットして nil
+  ↓      account は role 込みの Account エンティティ（毎回 DB から取得）
+[Usecase] account / account.id を受け取り、所有権・権限を判定
 ```
 
 **ポイント**:
-- Actions はトークンを検証して `account_id` を取り出す（セッションは使わない）。
-- **ロール**（`user` / `admin`）はトークンに焼き込まず、`GET /api/me` などで都度 DB から取得する（昇格/降格を即反映するため）。
+- 各 Action にインラインの JWT 検証コードは書かない。**認証の変更は ActionAuth 1 ファイルで完結**する。
+- `authenticate` はトークン検証に加えて Account を DB から引くため、削除済みアカウントのトークンは 401 になる。
+- **ロール**（`user` / `admin`）はトークンに焼き込まず、都度 DB から取得する（昇格/降格を即反映するため）。
 - **所有権チェック**は Usecase 層で行う（例: `idea.account_id == account_id` でなければ `Forbidden`）。ドメインは認証の詳細を知らず、account_id で判定するだけ。
+- Usecase のエラー文字列 → HTTP ステータス変換も ActionAuth の `error_status` に共通化されている。
 
 > 注: 旧構成では Rodauth + セッションを検討していたが、API ファースト化に伴い JWT Bearer に統一した。
 
