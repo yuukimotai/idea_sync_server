@@ -5,16 +5,19 @@ require "set"
 require "rack/utils"
 require "async/websocket/adapters/rack"
 require_relative "jwt_auth"
+require_relative "ws_broadcaster"
 
 module HanamiAuthApp
   # WebSocket server for global chat and per-meeting room chat.
   # room_code=xxx in query string → meeting room. omitted → global ("global" key).
-  # Falcon --count 1 single-process assumed; scale with Redis pub/sub if needed.
+  # 配信は broadcaster に委譲する:
+  #   REDIS_URL あり → RedisBroadcaster（Falcon --count N の複数プロセス対応）
+  #   REDIS_URL なし → LocalBroadcaster（単一プロセス・プロセス内配信のみ）
   class WebsocketHandler
     PATH = "/cable"
     GLOBAL_ROOM = "global"
 
-    # { room_key => Set<connection> }
+    # { room_key => Set<connection> }  ※このプロセスが持つ接続のみ
     @connections = Hash.new { |h, k| h[k] = Set.new }
     @mutex = Mutex.new
 
@@ -22,10 +25,12 @@ module HanamiAuthApp
       attr_reader :connections, :mutex
     end
 
-    def initialize(app, message_repository: nil, meeting_repository: nil)
+    def initialize(app, message_repository: nil, meeting_repository: nil, broadcaster: nil)
       @app = app
       @message_repository = message_repository
       @meeting_repository = meeting_repository
+      @broadcaster = broadcaster || LocalBroadcaster.new
+      @broadcaster.on_message { |room_key, json| deliver_local(room_key, json) }
     end
 
     def call(env)
@@ -65,6 +70,7 @@ module HanamiAuthApp
     end
 
     def handle_connection(connection, account_id, room_key, room_code)
+      @broadcaster.start # Redis 購読を開始（冪等）。受信専門プロセスにも必要
       self.class.mutex.synchronize { self.class.connections[room_key] << connection }
 
       meeting_id = resolve_meeting_id(room_code)
@@ -105,8 +111,13 @@ module HanamiAuthApp
       nil
     end
 
+    # 配信は broadcaster 経由。Redis モードでは全プロセス（自分含む）の
+    # deliver_local が呼ばれ、各プロセスが自分の接続にだけ書き込む。
     def broadcast(room_key, payload)
-      json = JSON.generate(payload)
+      @broadcaster.publish(room_key, JSON.generate(payload))
+    end
+
+    def deliver_local(room_key, json)
       targets = self.class.mutex.synchronize { self.class.connections[room_key].dup }
       targets.each do |conn|
         conn.write(json)

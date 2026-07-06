@@ -24,7 +24,7 @@ Ruby + Hanami 2.3 による **アイデア管理 + AI 壁打ち REST API**。DDD
 - ✅ **所有権チェック** — 各リソースは本人のみアクセス可（他人のものは 403）
 - ✅ **UUIDv7 主キー** — 連番 ID の列挙攻撃に対する多層防御
 - ✅ **AI 壁打ち** — Gemini と 1 アイデア 1 セッションで対話、ログを永続化
-- ✅ **WebSocket リアルタイムチャット** — Falcon 単プロセス（`:3001`）でグローバル＆会議室チャットを WS 専用サーバーとして分離
+- ✅ **WebSocket リアルタイムチャット** — Falcon 複数プロセス（`:3001`）でグローバル＆会議室チャットを WS 専用サーバーとして分離。Redis pub/sub でプロセス間ブロードキャスト
 
 ## リアルタイム / WebSocket
 
@@ -33,8 +33,10 @@ Ruby + Hanami 2.3 による **アイデア管理 + AI 壁打ち REST API**。DDD
 ### アーキテクチャ
 
 ```
-ブラウザ ──WS── Falcon :3001 (cable.ru)   ← WebSocket 専用プロセス
-ブラウザ ──HTTP─ Hanami :2300              ← REST API プロセス
+ブラウザ ──WS── Falcon :3001 (cable.ru, --count 2)  ← WS 専用・複数プロセス
+                 ├ プロセスA ─┐
+                 └ プロセスB ─┴─ Redis pub/sub（プロセス間ブロードキャスト）
+ブラウザ ──HTTP─ Hanami :2300                        ← REST API プロセス
 ```
 
 **分離の理由**: `async-websocket` の Rack アダプタは Falcon（async I/O）上でのみ正しく動く。Hanami の通常 HTTP スタックに混在させると 101 Upgrade が正常にディスパッチされないため、WS だけ Falcon の単独プロセスに切り出した。
@@ -52,11 +54,18 @@ WS 接続は **グローバル** または **会議室単位** にスコープ�
 | `/cable?token=<JWT>` | グローバルチャット（全員共有） |
 | `/cable?token=<JWT>&room_code=<12文字>` | 会議室チャット（ルームコード単位で分離） |
 
-### ブロードキャスト
+### ブロードキャスト（複数プロセス対応）
 
-プロセス内の接続レジストリ（`Hash<room_key, Set>` + `Mutex`）を使用。`room_key` は `"global"` またはルームコード文字列。**Falcon `--count 1`（単一プロセス）が前提**。複数プロセス化する場合は Redis pub/sub 等が必要。
+各プロセスは自分にぶら下がる接続だけをレジストリ（`Hash<room_key, Set>` + `Mutex`）で持ち、配信は `ws_broadcaster.rb` に委譲する:
 
-会議室チャットのメッセージは `messages.meeting_id`（UUID FK、null = グローバル）で区別され DB に永続化される。
+| `REDIS_URL` | Broadcaster | 挙動 |
+|-------------|-------------|------|
+| あり | `RedisBroadcaster` | `PUBLISH` → 全プロセス（自分含む）が購読で受信し、各自のローカル接続へ書き込む。`--count 2` 以上で必須 |
+| なし | `LocalBroadcaster` | プロセス内直接配信のみ（`--count 1` 専用） |
+
+- Redis 購読タスクは接続受付時に遅延起動（プロセスごとに1本、WS と同じ reactor 上で動くため書き込み競合なし）
+- Sequel は `fiber_concurrency` 拡張を有効化。async 環境で複数 fiber が同時にクエリしても fiber ごとに別接続が割り当たる
+- 会議室チャットのメッセージは `messages.meeting_id`（UUID FK、null = グローバル）で区別され DB に永続化される
 
 ## クイックスタート
 
@@ -70,7 +79,7 @@ GEMINI_API_KEY=your_api_key_here
 ```bash
 cd idea_sync_server
 docker compose up -d
-# → app(:2300) / ws(:3001) / client(:3000) / db(:5433) が一括起動
+# → app(:2300) / ws(:3001, 2プロセス) / client(:3000) / redis(:6380) / db(:5433) が一括起動
 # → DB マイグレーションも自動実行
 # → .env.local の GEMINI_API_KEY が app コンテナに自動で渡される
 ```
@@ -89,7 +98,8 @@ bundle exec foreman start -f Procfile.dev
 
 # または個別に起動
 bundle exec hanami server                                              # :2300
-bundle exec falcon serve --count 1 --bind tcp://localhost:3001 --config cable.ru  # :3001
+bundle exec falcon serve --count 1 --bind tcp://localhost:3001 --config cable.ru  # :3001（Redis なし単プロセス）
+REDIS_URL=redis://localhost:6379 bundle exec falcon serve --count 2 --bind tcp://localhost:3001 --config cable.ru  # 複数プロセス
 ```
 
 ### 必要な環境変数
@@ -99,6 +109,8 @@ bundle exec falcon serve --count 1 --bind tcp://localhost:3001 --config cable.ru
 | `DATABASE_URL` | PostgreSQL 接続文字列 |
 | `GEMINI_API_KEY` | Gemini API キー（AI 壁打ち用） |
 | `JWT_SECRET` | JWT 署名鍵（HTTP API・WS 両プロセスで共有。本番では必須） |
+| `REDIS_URL` | Redis 接続文字列（WS 複数プロセス時に必須。未設定ならプロセス内配信のみ） |
+| `DB_MAX_CONNECTIONS` | Sequel 接続プール上限（デフォルト 10） |
 
 ## API エンドポイント
 
@@ -200,7 +212,8 @@ idea_sync_server/
 │   ├── action_auth.rb            # API アクション共通の認証モジュール（authenticate / error_status）
 │   ├── gemini_client.rb          # Gemini API クライアント
 │   ├── meeting_serializer.rb     # Meeting → JSON ヘルパー
-│   ├── websocket_handler.rb      # WS ハンドラ（認証・ブロードキャスト）
+│   ├── websocket_handler.rb      # WS ハンドラ（認証・接続レジストリ）
+│   ├── ws_broadcaster.rb         # 配信戦略（LocalBroadcaster / RedisBroadcaster）
 │   └── uuid7.rb                  # UUIDv7 生成（RFC 9562）
 ├── app/
 │   ├── usecases/                 # アプリケーション層（操作）
@@ -328,7 +341,7 @@ docker compose down           # 停止
 - [x] WebSocket の会議スコープ化（room_code 単位の接続レジストリ・messages に meeting_id カラム追加）
 - [x] 会議内の機能ロール（タイムキーパー / 進行 / 書記 / 発表）
 - [x] 認証処理の共通化（全 API アクションを ActionAuth モジュールに統一）
-- [ ] WS 複数プロセス対応（Redis pub/sub によるブロードキャスト）
+- [x] WS 複数プロセス対応（Redis pub/sub によるブロードキャスト・Falcon --count 2・Sequel fiber_concurrency）
 - [ ] ユニット / 統合テストの拡充
 
 ## 参考

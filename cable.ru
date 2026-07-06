@@ -2,7 +2,9 @@
 
 # Standalone WebSocket process entry point.
 # Boots the minimal stack (DB + JWT + MessageRepository) without loading Hanami.
-# Run with: bundle exec falcon serve --count 1 --bind tcp://localhost:3001 --config cable.ru
+# Run with: bundle exec falcon serve --count N --bind tcp://localhost:3001 --config cable.ru
+# REDIS_URL が設定されていれば Redis pub/sub で全プロセスに配信（--count 2 以上で必須）。
+# 未設定ならプロセス内配信のみ（--count 1 専用）。
 
 begin
   require "dotenv/load"
@@ -25,6 +27,18 @@ require_relative "lib/hanami_auth_app/websocket_handler"
 message_repo = HanamiAuthApp::Repos::MessageRepository.new
 meeting_repo = HanamiAuthApp::Repos::MeetingRepository.new
 
+broadcaster =
+  if (redis_url = ENV["REDIS_URL"]) && !redis_url.empty?
+    HanamiAuthApp::RedisBroadcaster.new(redis_url)
+  else
+    HanamiAuthApp::LocalBroadcaster.new
+  end
+
 NOT_FOUND = proc { [404, { "content-type" => "text/plain" }, ["Not Found"]] }.freeze
 
-run HanamiAuthApp::WebsocketHandler.new(NOT_FOUND, message_repository: message_repo, meeting_repository: meeting_repo)
+run HanamiAuthApp::WebsocketHandler.new(
+  NOT_FOUND,
+  message_repository: message_repo,
+  meeting_repository: meeting_repo,
+  broadcaster: broadcaster
+)

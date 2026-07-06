@@ -20,14 +20,17 @@ services:
 
   ws:
     build: .
-    command: bundle exec falcon serve --count 1 --bind tcp://0.0.0.0:3001 --config cable.ru
+    command: bundle exec falcon serve --count 2 --bind tcp://0.0.0.0:3001 --config cable.ru
     ports:
       - "3001:3001"
     environment:
       DATABASE_URL: postgres://postgres:password@db/hanami_auth_app_development
       HANAMI_ENV: development
+      REDIS_URL: redis://redis:6379
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     volumes:
       - .:/app
@@ -48,6 +51,16 @@ services:
     depends_on:
       - app
       - ws
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   db:
     image: postgres:16
