@@ -342,7 +342,9 @@ docker compose down           # 停止
 - [x] 会議内の機能ロール（タイムキーパー / 進行 / 書記 / 発表）
 - [x] 認証処理の共通化（全 API アクションを ActionAuth モジュールに統一）
 - [x] WS 複数プロセス対応（Redis pub/sub によるブロードキャスト・Falcon --count 2・Sequel fiber_concurrency）
+- [ ] アイデア検索・フィルタ（検索クエリ用 API エンドポイント）
 - [ ] ユニット / 統合テストの拡充
+- [ ] AWS ECS/Fargate へのデプロイ（Terraform・deploy.yml の有効化）
 
 ## 参考
 
