@@ -128,7 +128,7 @@ REDIS_URL=redis://localhost:6379 bundle exec falcon serve --count 2 --bind tcp:/
 
 | メソッド | URL | ステータス | 説明 |
 |---------|-----|-----------|------|
-| `GET` | `/api/ideas` | 200 | アイデア一覧（自分のもののみ） |
+| `GET` | `/api/ideas` | 200 | アイデア一覧（自分のもののみ）。`?q=` でタイトル・説明の部分一致検索（大文字小文字区別なし）、`?sort=created_at\|updated_at\|title`・`?order=asc\|desc` で並び替え |
 | `POST` | `/api/ideas` | 201 | 新規作成 |
 | `GET` | `/api/ideas/:id` | 200/403/404 | 詳細（他人のものは 403） |
 | `PATCH` | `/api/ideas/:id` | 200/403/404 | 更新（他人のものは 403） |
@@ -342,7 +342,7 @@ docker compose down           # 停止
 - [x] 会議内の機能ロール（タイムキーパー / 進行 / 書記 / 発表）
 - [x] 認証処理の共通化（全 API アクションを ActionAuth モジュールに統一）
 - [x] WS 複数プロセス対応（Redis pub/sub によるブロードキャスト・Falcon --count 2・Sequel fiber_concurrency）
-- [ ] アイデア検索・フィルタ（検索クエリ用 API エンドポイント）
+- [x] アイデア検索・フィルタ（`GET /api/ideas?q=&sort=&order=`・ILIKE 部分一致・ソート列ホワイトリスト）
 - [ ] ユニット / 統合テストの拡充
 - [ ] AWS ECS/Fargate へのデプロイ（Terraform・deploy.yml の有効化）
 

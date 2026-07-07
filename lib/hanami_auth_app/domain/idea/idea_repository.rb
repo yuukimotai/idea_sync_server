@@ -12,7 +12,7 @@ module HanamiAuthApp
           raise NotImplementedError
         end
 
-        def list_by_account(account_id)
+        def list_by_account(account_id, q: nil, sort: "created_at", order: "asc")
           raise NotImplementedError
         end
 

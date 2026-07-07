@@ -17,7 +17,12 @@ module HanamiAuthApp
             usecase = Usecases::Idea::ListIdeas.new(
               HanamiAuthApp::App.container.resolve(:idea_repository)
             )
-            result = usecase.call(account_id: account.id)
+            result = usecase.call(
+              account_id: account.id,
+              q: request.params[:q],
+              sort: request.params[:sort],
+              order: request.params[:order]
+            )
 
             if result.success?
               response.body = { ideas: result.value[:ideas].map { |idea| idea_to_json(idea) } }.to_json

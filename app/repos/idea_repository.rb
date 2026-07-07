@@ -32,9 +32,20 @@ module HanamiAuthApp
         to_entity(row)
       end
 
-      def list_by_account(account_id)
-        rows = @db[:ideas].where(account_id: account_id).order(:created_at).all
-        rows.map { |row| to_entity(row) }
+      SORTABLE_COLUMNS = %w[created_at updated_at title].freeze
+
+      def list_by_account(account_id, q: nil, sort: "created_at", order: "asc")
+        ds = @db[:ideas].where(account_id: account_id)
+
+        if q && !q.strip.empty?
+          pattern = "%#{ds.escape_like(q.strip)}%"
+          ds = ds.where(Sequel.ilike(:title, pattern) | Sequel.ilike(:description, pattern))
+        end
+
+        sort_col = SORTABLE_COLUMNS.include?(sort.to_s) ? sort.to_sym : :created_at
+        ds = order.to_s == "desc" ? ds.order(Sequel.desc(sort_col)) : ds.order(sort_col)
+
+        ds.all.map { |row| to_entity(row) }
       end
 
       def update(idea)
