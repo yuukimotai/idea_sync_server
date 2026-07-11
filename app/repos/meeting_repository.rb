@@ -43,7 +43,14 @@ module HanamiAuthApp
         to_entity(row) if row
       end
 
+      UUID_FORMAT = /\A\h{8}-\h{4}-\h{4}-\h{4}-\h{12}\z/
+
+      # room_code フォールバック（find_by_room_code || find_by_id）で
+      # UUID でない文字列が渡ってくるため、形式チェックで PG の
+      # invalid input syntax エラー（500/400 化 + SQL 文字列の漏出）を防ぐ。
       def find_by_id(id)
+        return nil unless UUID_FORMAT.match?(id.to_s)
+
         row = @db[:meetings].where(id: id).first
         to_entity(row) if row
       end

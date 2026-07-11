@@ -45,7 +45,7 @@ jobs:
       env:
         DATABASE_URL: postgres://postgres:password@localhost:5432/hanami_auth_app_test
         HANAMI_ENV: test
-      run: bundle exec rspec spec/usecases/account/ -v
+      run: bundle exec rspec
 
   docker-build:
     runs-on: ubuntu-latest

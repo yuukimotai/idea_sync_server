@@ -28,6 +28,8 @@ module HanamiAuthApp
     end
 
     def self.decode(token)
+      return nil unless token.is_a?(String)
+
       parts = token.split(".")
       return nil if parts.length != 3
 

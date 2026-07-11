@@ -325,7 +325,7 @@ return unless account
 ## 開発フロー
 
 ```bash
-docker compose up -d          # 全サービス起動（app / ws / client / db）
+docker compose up -d          # 全サービス起動（app / ws / client / redis / db）
 docker compose logs -f app    # Hanami API ログ
 docker compose logs -f ws     # Falcon WS ログ
 docker compose logs -f client # Next.js ログ
@@ -333,6 +333,23 @@ docker compose restart app    # Hanami 再起動（変更反映）
 docker compose restart ws     # Falcon 再起動
 docker compose down           # 停止
 ```
+
+## テスト
+
+```bash
+# コンテナ内で実行（テスト用 DB に接続する）
+docker compose exec app sh -c \
+  "DATABASE_URL=postgres://postgres:password@db/hanami_auth_app_test bundle exec rspec"
+```
+
+| ディレクトリ | 内容 |
+|-------------|------|
+| `spec/domain/` | 純ドメインロジック（MeetingPolicy の権限判定） |
+| `spec/lib/` | JwtAuth（署名改ざん・不正入力）、WS Broadcaster |
+| `spec/repos/` | DB 統合: アイデア検索/並び替え/LIKE エスケープ、メッセージの会議スコープ分離 |
+| `spec/usecases/` | アカウント作成/ログイン、会議入室（パスコード・closed 拒否）、ロール付与/はく奪（admin 限定） |
+
+CI（`.github/workflows/ci.yml`）が push / PR ごとに全 spec + Docker ビルドを実行する。
 
 ## 次のステップ
 
@@ -343,7 +360,7 @@ docker compose down           # 停止
 - [x] 認証処理の共通化（全 API アクションを ActionAuth モジュールに統一）
 - [x] WS 複数プロセス対応（Redis pub/sub によるブロードキャスト・Falcon --count 2・Sequel fiber_concurrency）
 - [x] アイデア検索・フィルタ（`GET /api/ideas?q=&sort=&order=`・ILIKE 部分一致・ソート列ホワイトリスト）
-- [ ] ユニット / 統合テストの拡充
+- [x] ユニット / 統合テストの拡充（57 examples: ドメイン / JWT / リポジトリ / ユースケース、CI で全実行）
 - [ ] AWS ECS/Fargate へのデプロイ（Terraform・deploy.yml の有効化）
 
 ## 参考
